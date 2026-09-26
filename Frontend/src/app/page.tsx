@@ -10,22 +10,13 @@ import HeroWebGL from "@/components/HeroWebGL";
 import { ArrowRight, Play } from "lucide-react";
 
 export default function LandingPage() {
-  // Splash screen plays full once on initial website visit, never when returning from other pages
+  // Splash screen plays once on initial website visit, never when returning from other pages
   const [showSplash, setShowSplash] = useState<boolean>(() => {
     if (typeof window !== "undefined") {
       const completed =
         sessionStorage.getItem("legalens_splash_completed") ||
         localStorage.getItem("legalens_splash_completed");
       return !completed;
-    }
-    return false;
-  });
-  const [hasEntered, setHasEntered] = useState<boolean>(() => {
-    if (typeof window !== "undefined") {
-      return Boolean(
-        sessionStorage.getItem("legalens_splash_completed") ||
-        localStorage.getItem("legalens_splash_completed")
-      );
     }
     return false;
   });
@@ -37,7 +28,6 @@ export default function LandingPage() {
         localStorage.getItem("legalens_splash_completed");
       if (completed) {
         setShowSplash(false);
-        setHasEntered(true);
       }
     }
   }, []);
@@ -48,10 +38,6 @@ export default function LandingPage() {
       localStorage.setItem("legalens_splash_completed", "true");
     }
     setShowSplash(false);
-    // Trigger smooth homepage element entrance transition
-    setTimeout(() => {
-      setHasEntered(true);
-    }, 50);
   };
 
   return (
@@ -66,14 +52,8 @@ export default function LandingPage() {
         <main className="flex-1 relative flex flex-col justify-center max-w-7xl mx-auto w-full px-6 lg:px-12 py-8 lg:py-14">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-4 items-center relative">
             
-            {/* Left Hero Column: Smooth slide-in transition */}
-            <div
-              className={`lg:col-span-7 space-y-7 z-10 py-6 transition-all duration-1000 ease-out ${
-                hasEntered
-                  ? "opacity-100 translate-x-0 translate-y-0"
-                  : "opacity-0 -translate-x-8 translate-y-2"
-              }`}
-            >
+            {/* Left Hero Column */}
+            <div className="lg:col-span-7 space-y-7 z-10 py-6">
               <div className="space-y-4">
                 <h1 className="text-5xl lg:text-7xl font-extrabold tracking-tight text-[#0a0a0a] leading-[1.08]">
                   Make Yourself <br />
@@ -158,11 +138,7 @@ export default function LandingPage() {
               </div>
 
               {/* Handwritten calligraphic quote text */}
-              <div
-                className={`absolute right-0 top-16 lg:top-24 z-20 pointer-events-none text-right pr-2 transition-all duration-1000 delay-300 ${
-                  hasEntered ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-4"
-                }`}
-              >
+              <div className="absolute right-0 top-16 lg:top-24 z-20 pointer-events-none text-right pr-2">
                 <span className="font-serif italic text-neutral-600 text-sm tracking-wide block">
                   Law
                 </span>
@@ -178,13 +154,7 @@ export default function LandingPage() {
               </div>
 
               {/* Lady Justice Statue PNG (Statue2.png - High Quality) */}
-              <div
-                className={`relative z-10 w-full max-w-[400px] lg:max-w-[460px] h-[480px] lg:h-[580px] flex items-end justify-center transition-all duration-1000 ease-out ${
-                  hasEntered
-                    ? "opacity-100 translate-x-0 scale-100"
-                    : "opacity-0 translate-x-14 scale-105"
-                }`}
-              >
+              <div className="relative z-10 w-full max-w-[400px] lg:max-w-[460px] h-[480px] lg:h-[580px] flex items-end justify-center">
                 <Image
                   src="/Statue2.png"
                   alt="Lady Justice — Legalens"

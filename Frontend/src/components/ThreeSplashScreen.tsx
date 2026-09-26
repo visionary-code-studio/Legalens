@@ -12,14 +12,34 @@ export default function ThreeSplashScreen({ onComplete }: ThreeSplashScreenProps
   const canvasContainerRef = useRef<HTMLDivElement>(null);
   const [isFadingOut, setIsFadingOut] = useState<boolean>(false);
   const [storyStep, setStoryStep] = useState<number>(0);
+  const isFinishedRef = useRef<boolean>(false);
+  const cleanupListenersRef = useRef<(() => void) | null>(null);
 
   const handleFinish = useCallback(() => {
-    if (isFadingOut) return;
+    if (isFinishedRef.current) return;
+    isFinishedRef.current = true;
+
+    // Immediately stop and mute the video so it never attempts to replay or stutter
+    if (videoRef.current) {
+      try {
+        videoRef.current.pause();
+        videoRef.current.muted = true;
+      } catch {
+        // ignore
+      }
+    }
+
+    // Clean up all global motion listeners immediately
+    if (cleanupListenersRef.current) {
+      cleanupListenersRef.current();
+      cleanupListenersRef.current = null;
+    }
+
     setIsFadingOut(true);
     setTimeout(() => {
       onComplete();
-    }, 600);
-  }, [isFadingOut, onComplete]);
+    }, 700);
+  }, [onComplete]);
 
   // Storytelling sequence
   useEffect(() => {
@@ -120,7 +140,7 @@ export default function ThreeSplashScreen({ onComplete }: ThreeSplashScreenProps
   useEffect(() => {
     const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (prefersReducedMotion) {
-      onComplete();
+      handleFinish();
       return;
     }
 
@@ -132,6 +152,7 @@ export default function ThreeSplashScreen({ onComplete }: ThreeSplashScreenProps
 
     // Helper to immediately activate sound
     const unmuteNow = () => {
+      if (isFinishedRef.current) return;
       if (videoRef.current) {
         try {
           videoRef.current.muted = false;
@@ -141,6 +162,33 @@ export default function ThreeSplashScreen({ onComplete }: ThreeSplashScreenProps
         }
       }
     };
+
+    const motionEvents = [
+      "pointerdown",
+      "pointermove",
+      "mousemove",
+      "mouseenter",
+      "mouseover",
+      "wheel",
+      "scroll",
+      "touchstart",
+      "click",
+      "keydown"
+    ];
+
+    const autoUnmuteOnMotion = () => {
+      if (isFinishedRef.current) return;
+      unmuteNow();
+      cleanupMotionListeners();
+    };
+
+    const cleanupMotionListeners = () => {
+      motionEvents.forEach((evt) => {
+        window.removeEventListener(evt, autoUnmuteOnMotion);
+      });
+    };
+
+    cleanupListenersRef.current = cleanupMotionListeners;
 
     // Try starting unmuted immediately
     video.muted = false;
@@ -153,36 +201,10 @@ export default function ThreeSplashScreen({ onComplete }: ThreeSplashScreenProps
           // Playing unmuted successfully from start
         })
         .catch(() => {
-          // Browser autoplay policy restricted unmuted playback on reload.
-          // Start video playing muted smoothly so video NEVER stops or cuts off!
+          // Browser autoplay policy restricted unmuted playback on initial load.
+          if (isFinishedRef.current) return;
           video.muted = true;
-          video.play().catch(() => {
-            // Ignore play abort errors; video will keep buffering/playing
-          });
-
-          const autoUnmuteOnMotion = () => {
-            unmuteNow();
-            cleanupMotionListeners();
-          };
-
-          const cleanupMotionListeners = () => {
-            motionEvents.forEach((evt) => {
-              window.removeEventListener(evt, autoUnmuteOnMotion);
-            });
-          };
-
-          const motionEvents = [
-            "pointerdown",
-            "pointermove",
-            "mousemove",
-            "mouseenter",
-            "mouseover",
-            "wheel",
-            "scroll",
-            "touchstart",
-            "click",
-            "keydown"
-          ];
+          video.play().catch(() => {});
 
           motionEvents.forEach((evt) => {
             window.addEventListener(evt, autoUnmuteOnMotion, { passive: true, once: true });
@@ -190,22 +212,23 @@ export default function ThreeSplashScreen({ onComplete }: ThreeSplashScreenProps
         });
     }
 
-    // Generous safety timeout (32s) giving the 22.3s @LegalLens.mp4 video full time to complete
+    // Safety timeout giving the video full time to complete
     const safetyTimer = setTimeout(() => {
       handleFinish();
     }, 32000);
 
     return () => {
       clearTimeout(safetyTimer);
+      cleanupMotionListeners();
     };
-  }, [handleFinish, onComplete]);
+  }, [handleFinish]);
 
   return (
     <div
       role="dialog"
       aria-label="LEGALENS Cinematic Splash Screen"
-      className={`fixed inset-0 z-[9999] bg-[#000000] flex items-center justify-center transition-all duration-700 select-none overflow-hidden ${
-        isFadingOut ? "opacity-0 pointer-events-none scale-105" : "opacity-100"
+      className={`fixed inset-0 z-[9999] bg-[#000000] flex items-center justify-center transition-opacity duration-700 ease-in-out select-none overflow-hidden ${
+        isFadingOut ? "opacity-0 pointer-events-none" : "opacity-100"
       }`}
     >
       {/* 1. Core Cinematic Video Background - Hardware GPU Accelerated */}
@@ -215,7 +238,17 @@ export default function ThreeSplashScreen({ onComplete }: ThreeSplashScreenProps
         autoPlay
         playsInline
         preload="auto"
-        onEnded={handleFinish}
+        onEnded={() => {
+          if (videoRef.current) {
+            try {
+              videoRef.current.pause();
+              videoRef.current.muted = true;
+            } catch {
+              // ignore
+            }
+          }
+          handleFinish();
+        }}
         onError={() => {
           if (videoRef.current && !videoRef.current.src.endsWith("/LegalLens.mp4")) {
             videoRef.current.src = "/LegalLens.mp4";

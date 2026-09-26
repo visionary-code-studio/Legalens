@@ -54,8 +54,10 @@ desktop.ini
 *.swp
 *.swo
 
-# Large raw media files in root
+# Large raw media files
 /legalens video.mp4
+Frontend/public/legalens video.mp4
+Frontend/public/legalens-video.mp4
 /scratch/
 
 # Local test documents (strictly ignored from git)

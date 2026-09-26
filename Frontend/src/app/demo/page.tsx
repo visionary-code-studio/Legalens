@@ -85,11 +85,17 @@ export default function WatchDemoPage() {
         <div className="relative rounded-3xl overflow-hidden bg-black shadow-2xl border border-neutral-800 group">
           <video
             ref={videoRef}
-            src="/LegalLens.mp4"
+            src="/legalens-video.mp4"
             autoPlay
             playsInline
             onTimeUpdate={handleTimeUpdate}
             onEnded={() => setIsPlaying(false)}
+            onError={() => {
+              if (videoRef.current && !videoRef.current.src.endsWith("/LegalLens.mp4")) {
+                videoRef.current.src = "/LegalLens.mp4";
+                videoRef.current.play().catch(() => {});
+              }
+            }}
             className="w-full aspect-video object-contain bg-black cursor-pointer"
             onClick={togglePlay}
           />
