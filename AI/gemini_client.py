@@ -47,7 +47,7 @@ class LegalensAIClient:
 
     def __init__(self, api_key: Optional[str] = None):
         self.api_key = api_key or get_gemini_api_key()
-        self.model_name = "gemini-flash-latest"
+        self.model_name = "gemini-3.1-flash-lite"
         self.client = None
         if self.api_key:
             try:
@@ -80,22 +80,8 @@ class LegalensAIClient:
     def _call_gemini_json(self, system_instruction: str, prompt: str) -> Optional[Dict[str, Any]]:
         if not self.client:
             return None
-        try:
-            config = types.GenerateContentConfig(
-                system_instruction=system_instruction,
-                temperature=0.2,
-                response_mime_type="application/json"
-            )
-            response = self.client.models.generate_content(
-                model=self.model_name,
-                contents=prompt,
-                config=config
-            )
-            if response and response.text:
-                return self._clean_json_response(response.text)
-        except Exception as e:
-            print(f"[LegalensAIClient] Gemini call failed: {e}")
-            # Try fallback model if model_name had issues
+        candidate_models = ["gemini-3.1-flash-lite", "gemini-3.5-flash-lite", "gemini-3.5-flash", "gemini-3.8-flash"]
+        for model in candidate_models:
             try:
                 config = types.GenerateContentConfig(
                     system_instruction=system_instruction,
@@ -103,14 +89,17 @@ class LegalensAIClient:
                     response_mime_type="application/json"
                 )
                 response = self.client.models.generate_content(
-                    model="gemini-3.8-flash",
+                    model=model,
                     contents=prompt,
                     config=config
                 )
                 if response and response.text:
-                    return self._clean_json_response(response.text)
-            except Exception as inner_e:
-                print(f"[LegalensAIClient] Fallback model call failed: {inner_e}")
+                    cleaned = self._clean_json_response(response.text)
+                    if cleaned:
+                        return cleaned
+            except Exception as e:
+                print(f"[LegalensAIClient] Model {model} call failed: {e}")
+                continue
         return None
 
     def explain_clause(self, clause_text: str) -> Dict[str, Any]:

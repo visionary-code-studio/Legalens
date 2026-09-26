@@ -39,11 +39,27 @@ export default function DashboardTopNav({ title, showBack = false }: DashboardTo
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [userProfile, setUserProfile] = useState({
-    full_name: "Vaibhav Shaw",
-    email: "vaibhav@legalens.ai",
-    plan: "Free Plan",
-    avatar_initials: "V"
+  const [userProfile, setUserProfile] = useState(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const storedUser = localStorage.getItem("legalens_user");
+        if (storedUser) {
+          const parsed = JSON.parse(storedUser);
+          return {
+            full_name: parsed.full_name || "Raju Srivastav",
+            email: parsed.email || "raju@legalens.ai",
+            plan: parsed.plan || "Free Plan",
+            avatar_initials: parsed.avatar_initials || (parsed.full_name ? parsed.full_name.split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase() : "RS")
+          };
+        }
+      } catch {}
+    }
+    return {
+      full_name: "Raju Srivastav",
+      email: "raju@legalens.ai",
+      plan: "Free Plan",
+      avatar_initials: "RS"
+    };
   });
 
   const notifRef = useRef<HTMLDivElement>(null);
@@ -51,31 +67,27 @@ export default function DashboardTopNav({ title, showBack = false }: DashboardTo
 
   // Load user profile and notifications on mount
   useEffect(() => {
-    // 1. Load user from localStorage if logged in
     const storedUser = localStorage.getItem("legalens_user");
     if (storedUser) {
       try {
         const parsed = JSON.parse(storedUser);
         setUserProfile({
-          full_name: parsed.full_name || "Vaibhav Shaw",
-          email: parsed.email || "vaibhav@legalens.ai",
+          full_name: parsed.full_name || "Raju Srivastav",
+          email: parsed.email || "raju@legalens.ai",
           plan: parsed.plan || "Free Plan",
-          avatar_initials: parsed.avatar_initials || "V"
+          avatar_initials: parsed.avatar_initials || (parsed.full_name ? parsed.full_name.split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase() : "RS")
         });
-      } catch {
-        // use default
-      }
+      } catch {}
     } else {
-      // Fetch from backend profile
       resilientFetch("/api/profile")
         .then((res) => (res.ok ? res.json() : null))
         .then((data) => {
           if (data) {
             setUserProfile({
-              full_name: data.full_name || "Vaibhav Shaw",
-              email: data.email || "vaibhav@legalens.ai",
+              full_name: data.full_name || "Raju Srivastav",
+              email: data.email || "raju@legalens.ai",
               plan: data.plan || "Free Plan",
-              avatar_initials: data.avatar_initials || "V"
+              avatar_initials: data.avatar_initials || "RS"
             });
             localStorage.setItem("legalens_user", JSON.stringify(data));
           }
@@ -83,7 +95,6 @@ export default function DashboardTopNav({ title, showBack = false }: DashboardTo
         .catch(() => {});
     }
 
-    // 2. Fetch notifications
     fetchNotifications();
   }, []);
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import DashboardTopNav from "@/components/DashboardTopNav";
 import { resilientFetch } from "@/lib/api";
 import {
@@ -18,13 +18,20 @@ import {
   CheckCircle2,
   BookOpen,
   Sparkles,
-  Loader2
+  Loader2,
+  UploadCloud
 } from "lucide-react";
 
 export default function LexiLensPage() {
   const [activeTab, setActiveTab] = useState<"simple" | "terms" | "summary">("simple");
-  const [page, setPage] = useState<number>(3);
+  const [page, setPage] = useState<number>(1);
   const [isExplaining, setIsExplaining] = useState<boolean>(false);
+  const [isUploadingDoc, setIsUploadingDoc] = useState<boolean>(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [docId, setDocId] = useState<string | null>(null);
+  const [docName, setDocName] = useState<string>("Employment_Agreement.pdf");
+
   const [clauseText, setClauseText] = useState<string>(
     "The Employee shall not, during the term of this Agreement or thereafter, disclose, use, or exploit any confidential information of the Company without prior written consent."
   );
@@ -50,14 +57,114 @@ export default function LexiLensPage() {
     parties_affected: ["Employee", "Company"]
   });
 
-  const handleExplain = async () => {
-    if (!clauseText.trim()) return;
+  // Load active document on mount or from URL
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const urlDocId = params.get("doc_id") || localStorage.getItem("legalens_active_doc_id");
+      const storedName = localStorage.getItem("legalens_active_doc_name");
+
+      if (urlDocId) {
+        setDocId(urlDocId);
+        if (storedName) setDocName(storedName);
+
+        resilientFetch(`/api/documents/${urlDocId}`)
+          .then((res) => (res.ok ? res.json() : null))
+          .then((data) => {
+            if (data) {
+              setDocName(data.filename || storedName || "Contract.pdf");
+              if (data.clauses && data.clauses.length > 0) {
+                const first = data.clauses[0];
+                setClauseText(first.meaning ? `${first.title}: ${first.meaning}` : data.full_text || "");
+              } else if (data.full_text) {
+                setClauseText(data.full_text.slice(0, 600));
+              }
+            }
+          })
+          .catch(() => {});
+      }
+    }
+  }, []);
+
+  const handleRemoveDocument = async () => {
+    if (docId) {
+      try {
+        await resilientFetch(`/api/documents/${docId}`, { method: "DELETE" });
+      } catch {}
+    }
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("legalens_active_doc_id");
+      localStorage.removeItem("legalens_active_doc_name");
+    }
+    setDocId(null);
+    setDocName("");
+    setClauseText("");
+    setExplanation({
+      plain_explanation: "No active document. Please upload a contract or select one from Home to begin.",
+      key_points: ["Upload a document using the button above."],
+      important_terms: [],
+      parties_affected: []
+    });
+  };
+
+  const handleUploadNewDocument = async (file: File) => {
+    setIsUploadingDoc(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      let userId = "user_default";
+      if (typeof window !== "undefined") {
+        const userStr = localStorage.getItem("legalens_user");
+        if (userStr) {
+          try {
+            userId = JSON.parse(userStr).id || "user_default";
+          } catch {}
+        }
+      }
+      formData.append("user_id", userId);
+
+      const res = await resilientFetch("/api/documents/upload", {
+        method: "POST",
+        body: formData
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setDocId(data.document_id);
+        setDocName(data.filename);
+        if (typeof window !== "undefined") {
+          localStorage.setItem("legalens_active_doc_id", data.document_id);
+          localStorage.setItem("legalens_active_doc_name", data.filename);
+        }
+
+        const detailRes = await resilientFetch(`/api/documents/${data.document_id}`);
+        if (detailRes.ok) {
+          const detailData = await detailRes.json();
+          if (detailData.clauses && detailData.clauses.length > 0) {
+            const first = detailData.clauses[0];
+            const newText = first.meaning ? `${first.title}: ${first.meaning}` : detailData.full_text;
+            setClauseText(newText);
+            // Trigger automatic live explanation
+            handleExplainWithText(newText);
+          } else if (detailData.full_text) {
+            setClauseText(detailData.full_text.slice(0, 600));
+            handleExplainWithText(detailData.full_text.slice(0, 600));
+          }
+        }
+      }
+    } catch {} finally {
+      setIsUploadingDoc(false);
+    }
+  };
+
+  const handleExplainWithText = async (textToExplain: string) => {
+    if (!textToExplain.trim()) return;
     setIsExplaining(true);
     try {
       const res = await resilientFetch("/api/lexilens/explain", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: clauseText })
+        body: JSON.stringify({ text: textToExplain })
       });
       if (res.ok) {
         const data = await res.json();
@@ -69,10 +176,14 @@ export default function LexiLensPage() {
         });
       }
     } catch {
-      // Graceful offline fallback
+      // fallback
     } finally {
       setIsExplaining(false);
     }
+  };
+
+  const handleExplain = async () => {
+    await handleExplainWithText(clauseText);
   };
 
   const handleDownloadExplanation = () => {
@@ -152,27 +263,67 @@ export default function LexiLensPage() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           {/* Left Column: Document Viewer (col-span-7) */}
           <div className="lg:col-span-7 bg-white rounded-3xl border border-neutral-200/90 p-5 shadow-xs space-y-4">
+            {/* Hidden File Input for Changing / Uploading Document */}
+            <input
+              type="file"
+              ref={fileInputRef}
+              className="hidden"
+              accept=".pdf,.docx,.txt"
+              onChange={(e) => {
+                if (e.target.files && e.target.files[0]) {
+                  handleUploadNewDocument(e.target.files[0]);
+                }
+              }}
+            />
+
             {/* Document Header Chip */}
-            <div className="flex items-center justify-between bg-neutral-50 p-2.5 rounded-2xl border border-neutral-200/70">
-              <div className="flex items-center gap-2.5">
-                <div className="w-7 h-7 rounded-xl bg-red-50 text-red-600 flex items-center justify-center">
-                  <FileText className="w-4 h-4" />
+            {docName ? (
+              <div className="flex items-center justify-between bg-neutral-50 p-2.5 rounded-2xl border border-neutral-200/70">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-7 h-7 rounded-xl bg-red-50 text-red-600 flex items-center justify-center shrink-0">
+                    <FileText className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <span className="text-xs font-bold text-neutral-900 block leading-tight truncate">
+                      {docName}
+                    </span>
+                    <span className="text-[11px] text-neutral-500">Live Interactive Legal Parser</span>
+                  </div>
                 </div>
-                <div>
-                  <span className="text-xs font-bold text-neutral-900 block leading-tight">
-                    Employment_Agreement.pdf
-                  </span>
-                  <span className="text-[11px] text-neutral-500">12 pages • Live Interactive Parser</span>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isUploadingDoc}
+                    className="px-2.5 py-1 text-[11px] font-semibold text-neutral-700 hover:text-black bg-white rounded-lg border border-neutral-200 hover:border-black transition-colors cursor-pointer"
+                  >
+                    {isUploadingDoc ? "Uploading..." : "Change File"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleRemoveDocument}
+                    title="Remove document"
+                    aria-label="Close document"
+                    className="w-6 h-6 rounded-full hover:bg-neutral-200 flex items-center justify-center text-neutral-500 hover:text-red-600 transition-colors cursor-pointer"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
                 </div>
               </div>
-              <button
-                type="button"
-                aria-label="Close document"
-                className="w-6 h-6 rounded-full hover:bg-neutral-200 flex items-center justify-center text-neutral-500 transition-colors"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            </div>
+            ) : (
+              <div className="p-4 rounded-2xl bg-neutral-50 border border-dashed border-neutral-300 text-center space-y-2">
+                <p className="text-xs font-semibold text-neutral-800">No Document Active</p>
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isUploadingDoc}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-black text-white text-xs font-medium hover:bg-neutral-800 transition-colors cursor-pointer"
+                >
+                  <UploadCloud className="w-3.5 h-3.5" />
+                  <span>{isUploadingDoc ? "Uploading..." : "Upload Legal Document"}</span>
+                </button>
+              </div>
+            )}
 
             {/* Document Toolbar */}
             <div className="flex items-center justify-between px-3 py-1.5 bg-neutral-100/70 rounded-xl text-xs text-neutral-600">

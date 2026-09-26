@@ -412,6 +412,29 @@ def get_document_file(doc_id: str, db: Session = Depends(get_db)):
 
     return PlainTextResponse(content=doc.full_text, media_type="text/plain")
 
+@app.delete("/api/documents/{doc_id}")
+def delete_document(doc_id: str, db: Session = Depends(get_db)):
+    """Deletes document record, associated chunks, clauses, and file on disk."""
+    doc = db.query(Document).filter(Document.id == doc_id).first()
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    # Remove child records
+    db.query(ExtractedClause).filter(ExtractedClause.document_id == doc_id).delete()
+    db.query(DocumentChunk).filter(DocumentChunk.document_id == doc_id).delete()
+    db.delete(doc)
+    db.commit()
+
+    # Remove physical file from UPLOAD_DIR if exists
+    matching_files = list(UPLOAD_DIR.glob(f"{doc_id}_*"))
+    for f in matching_files:
+        try:
+            f.unlink(missing_ok=True)
+        except Exception:
+            pass
+
+    return {"status": "success", "message": f"Document {doc_id} deleted successfully."}
+
 @app.get("/api/documents/{doc_id}/export/report")
 def export_clause_report(doc_id: str, db: Session = Depends(get_db)):
     """Download executive legal risk analysis report for ClauseLens."""
