@@ -12,11 +12,26 @@ license = {text = "MIT"}
 authors = [
     {name = "Legalens Team", email = "contact@legalens.ai"}
 ]
+keywords = ["legal-ai", "genai", "contract-analysis", "gemini", "dpdpa-2023"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Legal Industry",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Text Processing :: Linguistic",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
-addopts = "-v --strict-markers"
+addopts = "-v --strict-markers --tb=short"
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "security: security-related tests",
+    "integration: integration tests requiring API keys",
+]
 
 [tool.black]
 line-length = 100
@@ -25,3 +40,13 @@ target-version = ['py310', 'py311', 'py312', 'py313']
 [tool.mypy]
 ignore_missing_imports = true
 check_untyped_defs = true
+warn_return_any = true
+warn_unused_configs = true
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "S", "B"]
+ignore = ["S101", "S104"]

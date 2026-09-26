@@ -18,7 +18,7 @@ export default function Footer() {
   };
 
   return (
-    <footer className="w-full bg-[#fbfbfb] text-neutral-900 font-sans antialiased overflow-hidden pt-16">
+    <footer className="w-full bg-[#fbfbfb] text-neutral-900 font-sans antialiased overflow-hidden pt-16" role="contentinfo" aria-label="Site footer">
       {/* 1. Top Newsletter Section */}
       <div className="max-w-4xl mx-auto px-6 text-center space-y-4 mb-16">
         <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-neutral-900 tracking-tight font-serif">

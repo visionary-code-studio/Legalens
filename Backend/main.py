@@ -4,12 +4,13 @@ import io
 import re
 import json
 import uuid
+import logging
 from pathlib import Path
 from typing import Optional, List, Dict, Any
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Depends
 from fastapi.responses import FileResponse, PlainTextResponse, Response, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from sqlalchemy.orm import Session
 from pypdf import PdfReader
 
@@ -19,9 +20,21 @@ sys.path.append(str(Path(__file__).resolve().parent.parent))
 import hashlib
 from AI.gemini_client import LegalensAIClient
 from AI.chunking.legal_chunker import LegalDocumentChunker
+from AI.security.rate_limiter import api_limiter, ai_limiter, auth_limiter
 from Backend.database import engine, Base, get_db
 from Backend.models import Document, DocumentChunk, ExtractedClause, User, Notification
 from Backend.translation_engine import DocumentTranslationEngine
+
+# Structured logging configuration
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S"
+)
+logger = logging.getLogger("legalens.api")
+
+# Maximum file upload size: 50 MB
+MAX_UPLOAD_SIZE_BYTES = 50 * 1024 * 1024
 
 UPLOAD_DIR = Path(__file__).resolve().parent / "uploads"
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
@@ -106,7 +119,9 @@ seed_default_data()
 app = FastAPI(
     title="Legalens Backend API",
     description="GenAI-powered legal literacy & document intelligence services for India.",
-    version="1.0.0"
+    version="1.0.0",
+    docs_url="/docs",
+    redoc_url="/redoc",
 )
 
 from fastapi.middleware.gzip import GZipMiddleware
@@ -114,6 +129,34 @@ from starlette.requests import Request
 
 # Enable GZip compression for high efficiency (<1kb threshold)
 app.add_middleware(GZipMiddleware, minimum_size=1000)
+
+# Rate Limiting Middleware — per-IP token bucket
+@app.middleware("http")
+async def rate_limit_middleware(request: Request, call_next):
+    client_ip = request.client.host if request.client else "unknown"
+    path = request.url.path
+
+    # Select limiter tier based on endpoint
+    if "/api/auth/" in path:
+        limiter = auth_limiter
+    elif any(ai_path in path for ai_path in ["/api/lexilens", "/api/clauselens", "/api/querylens", "/api/comparelens", "/api/vaanilens", "/api/digitallens", "/api/actionlens"]):
+        limiter = ai_limiter
+    else:
+        limiter = api_limiter
+
+    allowed, remaining = limiter.is_allowed(client_ip)
+    if not allowed:
+        logger.warning(f"Rate limit exceeded for {client_ip} on {path}")
+        from starlette.responses import JSONResponse
+        return JSONResponse(
+            status_code=429,
+            content={"detail": "Rate limit exceeded. Please try again later."},
+            headers={"Retry-After": "60", "X-RateLimit-Remaining": "0"}
+        )
+
+    response = await call_next(request)
+    response.headers["X-RateLimit-Remaining"] = str(remaining)
+    return response
 
 # Security Headers Middleware
 @app.middleware("http")
@@ -146,15 +189,45 @@ app.add_middleware(
 ai_client = LegalensAIClient()
 chunker = LegalDocumentChunker()
 
-# --- Request Models ---
+# --- Request Models with Input Validation ---
 class QueryRequest(BaseModel):
     question: str
     document_id: Optional[str] = None
     document_context: Optional[str] = None
 
+    @field_validator("question")
+    @classmethod
+    def question_not_empty(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError("Question must not be empty.")
+        if len(v) > 5000:
+            raise ValueError("Question exceeds maximum length of 5000 characters.")
+        return v.strip()
+
 class TranslateRequest(BaseModel):
     text: str
     target_language: str
+
+    @field_validator("text")
+    @classmethod
+    def text_not_empty(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError("Text to translate must not be empty.")
+        if len(v) > 50000:
+            raise ValueError("Text exceeds maximum length of 50000 characters.")
+        return v.strip()
+
+    @field_validator("target_language")
+    @classmethod
+    def valid_language(cls, v: str) -> str:
+        allowed = [
+            "Hindi", "Tamil", "Telugu", "Bengali", "Marathi", "Gujarati",
+            "Kannada", "Malayalam", "Punjabi", "Odia", "Assamese", "Urdu",
+            "English", "Sanskrit"
+        ]
+        if v.strip() not in allowed:
+            raise ValueError(f"Unsupported language. Supported: {', '.join(allowed)}")
+        return v.strip()
 
 class CompareRequest(BaseModel):
     doc_a_id: Optional[str] = "doc_v1"
@@ -165,6 +238,13 @@ class CompareRequest(BaseModel):
 class ExplainRequest(BaseModel):
     text: str
 
+    @field_validator("text")
+    @classmethod
+    def text_not_empty(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError("Text to explain must not be empty.")
+        return v.strip()
+
 class SignupRequest(BaseModel):
     email: str
     password: str
@@ -173,6 +253,23 @@ class SignupRequest(BaseModel):
     organization: Optional[str] = "Srivastav Legal & Associates"
     role: Optional[str] = "Legal Practitioner & Citizen"
     preferred_language: Optional[str] = "Hindi (हिन्दी)"
+
+    @field_validator("email")
+    @classmethod
+    def email_valid(cls, v: str) -> str:
+        import re as _re
+        if not _re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', v.strip()):
+            raise ValueError("Invalid email address format.")
+        return v.strip().lower()
+
+    @field_validator("password")
+    @classmethod
+    def password_strong(cls, v: str) -> str:
+        if len(v) < 6:
+            raise ValueError("Password must be at least 6 characters.")
+        if len(v) > 128:
+            raise ValueError("Password exceeds maximum length.")
+        return v
 
 class LoginRequest(BaseModel):
     email: str
@@ -311,6 +408,24 @@ async def upload_document(
     """Receives, parses, chunks, and indexes legal documents into SQLite, cryptographically sealed to user."""
     content = await file.read()
     filename = file.filename or "uploaded_contract.pdf"
+
+    # Enforce upload size limit (50 MB)
+    if len(content) > MAX_UPLOAD_SIZE_BYTES:
+        raise HTTPException(
+            status_code=413,
+            detail=f"File size ({len(content) // (1024*1024)}MB) exceeds maximum allowed size of 50MB."
+        )
+
+    # Validate file extension
+    allowed_extensions = {".pdf", ".txt", ".docx", ".doc", ".png", ".jpg", ".jpeg"}
+    file_ext = Path(filename).suffix.lower()
+    if file_ext not in allowed_extensions:
+        raise HTTPException(
+            status_code=415,
+            detail=f"Unsupported file type '{file_ext}'. Allowed: {', '.join(allowed_extensions)}"
+        )
+
+    logger.info(f"Document upload: {filename} ({len(content)} bytes) by user={user_id or 'anonymous'}")
     file_size = len(content)
 
     extracted_text = ""
@@ -1169,4 +1284,5 @@ if __name__ == "__main__":
     import uvicorn
     import os
     port = int(os.environ.get("PORT", 8000))
+    logger.info(f"Starting Legalens API on port {port}")
     uvicorn.run("Backend.main:app", host="0.0.0.0", port=port, reload=True)

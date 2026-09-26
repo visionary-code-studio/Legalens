@@ -27,11 +27,30 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   title: "Legalens — Make Yourself Legally Educated",
-  description: "GenAI-powered legal literacy and document intelligence platform.",
+  description:
+    "Legalens is a GenAI-powered legal literacy and document intelligence platform for India. Analyze contracts, detect risks, translate to vernacular languages, and get actionable legal insights — all powered by Google Gemini.",
+  keywords: [
+    "legal AI",
+    "contract analysis",
+    "legal literacy India",
+    "document intelligence",
+    "GenAI legal",
+    "DPDPA 2023",
+    "Google Gemini",
+  ],
+  authors: [{ name: "Visionary Code Studio" }],
   icons: {
     icon: "/logo_updated.png",
     shortcut: "/logo_updated.png",
     apple: "/logo_updated.png",
+  },
+  openGraph: {
+    title: "Legalens — Make Yourself Legally Educated",
+    description:
+      "AI-powered legal document analysis, risk detection, and vernacular translation for India.",
+    type: "website",
+    locale: "en_IN",
+    siteName: "Legalens",
   },
 };
 
@@ -45,7 +64,13 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} ${brushFont.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col font-sans">{children}</body>
+      <body className="min-h-full flex flex-col font-sans">
+        {/* Accessibility: Skip to main content link for keyboard navigation */}
+        <a href="#main-content" className="skip-to-content">
+          Skip to main content
+        </a>
+        <div id="main-content">{children}</div>
+      </body>
     </html>
   );
 }
