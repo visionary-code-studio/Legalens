@@ -2,6 +2,7 @@
 
 import { useState, useRef } from "react";
 import DashboardTopNav from "@/components/DashboardTopNav";
+import { resilientFetch } from "@/lib/api";
 import {
   ShieldCheck,
   CheckCircle2,
@@ -115,7 +116,7 @@ export default function DigitalLensPage() {
         const formData = new FormData();
         formData.append("file", uploadedFile);
 
-        const res = await fetch("http://localhost:8000/api/digitallens/audit-file", {
+        const res = await resilientFetch("/api/digitallens/audit-file", {
           method: "POST",
           body: formData
         });
@@ -136,7 +137,7 @@ export default function DigitalLensPage() {
         setSuccessNotice(`Forensic analysis complete for "${uploadedFile.name}"!`);
       } else {
         // Verify default reference document
-        const res = await fetch("http://localhost:8000/api/digitallens/verify", {
+        const res = await resilientFetch("/api/digitallens/verify", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({

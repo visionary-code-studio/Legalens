@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import DashboardSidebar from "@/components/DashboardSidebar";
 import DashboardTopNav from "@/components/DashboardTopNav";
+import { resilientFetch } from "@/lib/api";
 import {
   UploadCloud,
   FileText,
@@ -60,7 +61,7 @@ export default function DashboardPage() {
   const fetchRecentDocs = useCallback(async () => {
     try {
       const userId = getCurrentUserId();
-      const res = await fetch(`http://localhost:8000/api/documents/recent?user_id=${userId}`);
+      const res = await resilientFetch(`/api/documents/recent?user_id=${userId}`);
       if (res.ok) {
         const data = await res.json();
         setRecentDocs(data);
@@ -85,7 +86,7 @@ export default function DashboardPage() {
     formData.append("user_id", userId);
 
     try {
-      const res = await fetch("http://localhost:8000/api/documents/upload", {
+      const res = await resilientFetch("/api/documents/upload", {
         method: "POST",
         body: formData,
       });
@@ -278,7 +279,7 @@ export default function DashboardPage() {
                     onClick={async () => {
                       setIsUploading(true);
                       try {
-                        const res = await fetch("http://localhost:8000/api/demo/feed");
+                        const res = await resilientFetch("/api/demo/feed");
                         if (res.ok) {
                           const demo = await res.json();
                           const doc = demo.document;

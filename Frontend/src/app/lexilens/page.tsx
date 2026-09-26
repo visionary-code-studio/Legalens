@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import DashboardTopNav from "@/components/DashboardTopNav";
+import { resilientFetch } from "@/lib/api";
 import {
   Download,
   Share2,
@@ -53,7 +54,7 @@ export default function LexiLensPage() {
     if (!clauseText.trim()) return;
     setIsExplaining(true);
     try {
-      const res = await fetch("http://localhost:8000/api/lexilens/explain", {
+      const res = await resilientFetch("/api/lexilens/explain", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text: clauseText })

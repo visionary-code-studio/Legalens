@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import DashboardTopNav from "@/components/DashboardTopNav";
+import { resilientFetch } from "@/lib/api";
 import {
   User,
   Building2,
@@ -42,7 +43,7 @@ export default function ProfilePage() {
 
   const fetchProfile = async () => {
     try {
-      const res = await fetch("http://localhost:8000/api/profile");
+      const res = await resilientFetch("/api/profile");
       if (res.ok) {
         const data = await res.json();
         setFormData(data);
@@ -67,7 +68,7 @@ export default function ProfilePage() {
     setSaveSuccess(false);
 
     try {
-      const res = await fetch("http://localhost:8000/api/profile/update", {
+      const res = await resilientFetch("/api/profile/update", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

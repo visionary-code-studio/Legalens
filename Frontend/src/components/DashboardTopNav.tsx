@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { resilientFetch } from "@/lib/api";
 import {
   Bell,
   ChevronDown,
@@ -66,7 +67,7 @@ export default function DashboardTopNav({ title, showBack = false }: DashboardTo
       }
     } else {
       // Fetch from backend profile
-      fetch("http://localhost:8000/api/profile")
+      resilientFetch("/api/profile")
         .then((res) => (res.ok ? res.json() : null))
         .then((data) => {
           if (data) {
@@ -88,7 +89,7 @@ export default function DashboardTopNav({ title, showBack = false }: DashboardTo
 
   const fetchNotifications = async () => {
     try {
-      const res = await fetch("http://localhost:8000/api/notifications");
+      const res = await resilientFetch("/api/notifications");
       if (res.ok) {
         const data = await res.json();
         setNotifications(data.notifications || []);
@@ -131,7 +132,7 @@ export default function DashboardTopNav({ title, showBack = false }: DashboardTo
 
   const handleMarkAllRead = async () => {
     try {
-      await fetch("http://localhost:8000/api/notifications/read-all", { method: "POST" });
+      await resilientFetch("/api/notifications/read-all", { method: "POST" });
     } catch {}
     setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
     setUnreadCount(0);
@@ -139,7 +140,7 @@ export default function DashboardTopNav({ title, showBack = false }: DashboardTo
 
   const handleNotificationClick = async (item: NotificationItem) => {
     try {
-      await fetch(`http://localhost:8000/api/notifications/${item.id}/read`, { method: "POST" });
+      await resilientFetch(`/api/notifications/${item.id}/read`, { method: "POST" });
     } catch {}
     setNotifications((prev) =>
       prev.map((n) => (n.id === item.id ? { ...n, is_read: true } : n))

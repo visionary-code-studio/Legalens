@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import DashboardTopNav from "@/components/DashboardTopNav";
+import { resilientFetch } from "@/lib/api";
 import {
   ListTodo,
   Check,
@@ -53,7 +54,7 @@ export default function ActionLensPage() {
   ]);
 
   useEffect(() => {
-    fetch("http://localhost:8000/api/actionlens/plan")
+    resilientFetch("/api/actionlens/plan")
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (data) {
@@ -101,7 +102,7 @@ export default function ActionLensPage() {
   const handleExportActionPlan = async () => {
     setExporting(true);
     try {
-      const res = await fetch("http://localhost:8000/api/actionlens/export", {
+      const res = await resilientFetch("/api/actionlens/export", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

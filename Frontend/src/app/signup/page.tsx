@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { resilientFetch } from "@/lib/api";
 import { Scale, Lock, Mail, User, Building2, Globe2, ArrowRight, Loader2, AlertCircle, ShieldCheck } from "lucide-react";
 
 export default function SignupPage() {
@@ -35,7 +36,7 @@ export default function SignupPage() {
     setError(null);
 
     try {
-      const res = await fetch("http://localhost:8000/api/auth/signup", {
+      const res = await resilientFetch("/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

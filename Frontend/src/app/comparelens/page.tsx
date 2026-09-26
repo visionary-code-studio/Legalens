@@ -2,6 +2,7 @@
 
 import { useState, useRef } from "react";
 import DashboardTopNav from "@/components/DashboardTopNav";
+import { resilientFetch } from "@/lib/api";
 import {
   GitCompare,
   Download,
@@ -115,7 +116,7 @@ export default function CompareLensPage() {
         formData.append("file_a", fileA);
         formData.append("file_b", fileB);
 
-        const res = await fetch("http://localhost:8000/api/comparelens/upload-and-compare", {
+        const res = await resilientFetch("/api/comparelens/upload-and-compare", {
           method: "POST",
           body: formData
         });
@@ -140,7 +141,7 @@ export default function CompareLensPage() {
         }
       } else {
         // Compare sample/default IDs
-        const res = await fetch("http://localhost:8000/api/comparelens/compare", {
+        const res = await resilientFetch("/api/comparelens/compare", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -196,7 +197,7 @@ export default function CompareLensPage() {
   const handleExportComparison = async () => {
     setExporting(true);
     try {
-      const res = await fetch("http://localhost:8000/api/comparelens/export", {
+      const res = await resilientFetch("/api/comparelens/export", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import DashboardTopNav from "@/components/DashboardTopNav";
 import DocumentPreviewModal from "@/components/DocumentPreviewModal";
+import { resilientFetch } from "@/lib/api";
 import {
   MessageSquare,
   Paperclip,
@@ -122,7 +123,7 @@ export default function QueryLensPage() {
     formData.append("file", file);
 
     try {
-      const res = await fetch("http://localhost:8000/api/documents/upload", {
+      const res = await resilientFetch("/api/documents/upload", {
         method: "POST",
         body: formData,
       });
@@ -208,7 +209,7 @@ export default function QueryLensPage() {
     abortControllerRef.current = new AbortController();
 
     try {
-      const res = await fetch("http://localhost:8000/api/querylens/stream", {
+      const res = await resilientFetch("/api/querylens/stream", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

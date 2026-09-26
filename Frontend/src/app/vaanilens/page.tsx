@@ -3,6 +3,7 @@
 import { useState, useRef } from "react";
 import DashboardTopNav from "@/components/DashboardTopNav";
 import VernacularDropdown from "@/components/VernacularDropdown";
+import { resilientFetch } from "@/lib/api";
 import {
   Languages,
   FileText,
@@ -66,7 +67,7 @@ export default function VaaniLensPage() {
     setSelectedLang(targetLang);
     setSnippetLoading(true);
     try {
-      const res = await fetch("http://localhost:8000/api/vaanilens/translate", {
+      const res = await resilientFetch("/api/vaanilens/translate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -119,7 +120,7 @@ export default function VaaniLensPage() {
     formData.append("target_language", selectedLang);
 
     try {
-      const res = await fetch("http://localhost:8000/api/vaanilens/translate-document", {
+      const res = await resilientFetch("/api/vaanilens/translate-document", {
         method: "POST",
         body: formData
       });
@@ -154,7 +155,7 @@ export default function VaaniLensPage() {
     if (!docResult) return;
 
     try {
-      const res = await fetch("http://localhost:8000/api/vaanilens/export-translation", {
+      const res = await resilientFetch("/api/vaanilens/export-translation", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

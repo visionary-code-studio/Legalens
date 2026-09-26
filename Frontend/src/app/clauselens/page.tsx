@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import DashboardTopNav from "@/components/DashboardTopNav";
 import DocumentPreviewModal from "@/components/DocumentPreviewModal";
+import { resilientFetch } from "@/lib/api";
 import {
   Download,
   FileSearch,
@@ -165,7 +166,7 @@ export default function ClauseLensPage() {
 
     if (docId) {
       setLoading(true);
-      fetch(`http://localhost:8000/api/documents/${docId}`)
+      resilientFetch(`/api/documents/${docId}`)
         .then((res) => (res.ok ? res.json() : null))
         .then((data) => {
           if (data) {
@@ -199,7 +200,7 @@ export default function ClauseLensPage() {
     try {
       const targetId = activeDocId || localStorage.getItem("legalens_active_doc_id");
       if (targetId) {
-        const res = await fetch(`http://localhost:8000/api/documents/${targetId}/export/report`);
+        const res = await resilientFetch(`/api/documents/${targetId}/export/report`);
         if (res.ok) {
           const blob = await res.blob();
           const downloadUrl = window.URL.createObjectURL(blob);

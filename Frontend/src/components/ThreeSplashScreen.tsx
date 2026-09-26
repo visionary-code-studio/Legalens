@@ -2,6 +2,7 @@
 
 import { useRef, useState, useEffect, useCallback } from "react";
 import * as THREE from "three";
+import { Volume2, VolumeX } from "lucide-react";
 
 interface ThreeSplashScreenProps {
   onComplete: () => void;
@@ -12,6 +13,7 @@ export default function ThreeSplashScreen({ onComplete }: ThreeSplashScreenProps
   const canvasContainerRef = useRef<HTMLDivElement>(null);
   const [isFadingOut, setIsFadingOut] = useState<boolean>(false);
   const [storyStep, setStoryStep] = useState<number>(0);
+  const [isAudioActive, setIsAudioActive] = useState<boolean>(true);
 
   const handleFinish = useCallback(() => {
     if (isFadingOut) return;
@@ -23,9 +25,6 @@ export default function ThreeSplashScreen({ onComplete }: ThreeSplashScreenProps
 
   // Storytelling sequence
   useEffect(() => {
-    // Step 0: Welcome to Legalens (0s)
-    // Step 1: Subtitle storytelling (1.6s)
-    // Step 2: Fade storytelling to let video shine clearly (3.8s)
     const t1 = setTimeout(() => setStoryStep(1), 1600);
     const t2 = setTimeout(() => setStoryStep(2), 3800);
 
@@ -47,7 +46,6 @@ export default function ThreeSplashScreen({ onComplete }: ThreeSplashScreenProps
     const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100);
     camera.position.z = 20;
 
-    // Optimized WebGL configuration: 1x pixel ratio, no antialias, zero CPU buffer uploads
     const renderer = new THREE.WebGLRenderer({
       alpha: true,
       antialias: false,
@@ -96,7 +94,6 @@ export default function ThreeSplashScreen({ onComplete }: ThreeSplashScreenProps
     let animationFrameId: number;
     const startTime = performance.now();
 
-    // Pure GPU transform animation — No CPU BufferAttribute mutations
     const animate = () => {
       animationFrameId = requestAnimationFrame(animate);
       const elapsedTime = (performance.now() - startTime) / 1000;
@@ -121,7 +118,7 @@ export default function ThreeSplashScreen({ onComplete }: ThreeSplashScreenProps
     };
   }, []);
 
-  // Video autoplay immediately on mount/reload with audio unmuted
+  // Video autoplay with instant audio unmuting without requiring click
   useEffect(() => {
     const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (prefersReducedMotion) {
@@ -130,30 +127,90 @@ export default function ThreeSplashScreen({ onComplete }: ThreeSplashScreenProps
     }
 
     const video = videoRef.current;
-    if (video) {
-      video.muted = false;
-      video.currentTime = 0;
-      const playPromise = video.play();
-      if (playPromise !== undefined) {
-        playPromise.catch((err) => {
-          // If browser restricts unmuted autoplay policy, play muted and attach one-time listener to unmute
-          console.warn("Unmuted autoplay restricted by browser policy; enabling audio on first interaction:", err);
+    if (!video) return;
+
+    // Set initial audio volume
+    video.volume = 1.0;
+
+    // Helper to immediately activate sound
+    const unmuteNow = () => {
+      if (videoRef.current) {
+        try {
+          videoRef.current.muted = false;
+          videoRef.current.volume = 1.0;
+          setIsAudioActive(true);
+        } catch {
+          // ignore
+        }
+      }
+    };
+
+    // Try starting unmuted immediately
+    video.muted = false;
+    video.currentTime = 0;
+
+    const playPromise = video.play();
+    if (playPromise !== undefined) {
+      playPromise
+        .then(() => {
+          // Playing unmuted successfully
+          setIsAudioActive(true);
+        })
+        .catch(() => {
+          // Browser autoplay policy restricted unmuted playback on reload.
+          // Start video playing, and immediately bind passive motion & focus listeners
+          // so ANY mouse move, scroll, or window focus immediately unmutes audio!
           video.muted = true;
           video.play().catch(handleFinish);
+          setIsAudioActive(false);
 
-          const enableAudio = () => {
-            if (videoRef.current) {
-              videoRef.current.muted = false;
-            }
-            window.removeEventListener("click", enableAudio);
-            window.removeEventListener("keydown", enableAudio);
-            window.removeEventListener("touchstart", enableAudio);
+          const autoUnmuteOnMotion = () => {
+            unmuteNow();
+            cleanupMotionListeners();
           };
-          window.addEventListener("click", enableAudio, { once: true });
-          window.addEventListener("keydown", enableAudio, { once: true });
-          window.addEventListener("touchstart", enableAudio, { once: true });
+
+          const cleanupMotionListeners = () => {
+            motionEvents.forEach((evt) => {
+              window.removeEventListener(evt, autoUnmuteOnMotion);
+            });
+          };
+
+          const motionEvents = [
+            "pointermove",
+            "mousemove",
+            "mouseenter",
+            "mouseover",
+            "wheel",
+            "scroll",
+            "focus",
+            "pageshow",
+            "visibilitychange",
+            "touchstart",
+            "click",
+            "keydown"
+          ];
+
+          motionEvents.forEach((evt) => {
+            window.addEventListener(evt, autoUnmuteOnMotion, { passive: true, once: true });
+          });
+
+          // Also attempt rapid polling to unmute as soon as browser unlocks audio
+          const pollTimer = setInterval(() => {
+            if (videoRef.current && !videoRef.current.paused) {
+              try {
+                videoRef.current.muted = false;
+                if (!videoRef.current.muted) {
+                  setIsAudioActive(true);
+                  clearInterval(pollTimer);
+                }
+              } catch {
+                // Keep polling
+              }
+            }
+          }, 200);
+
+          setTimeout(() => clearInterval(pollTimer), 5000);
         });
-      }
     }
 
     // High timeout (120s) as safety boundary so full video plays to completion
@@ -161,8 +218,19 @@ export default function ThreeSplashScreen({ onComplete }: ThreeSplashScreenProps
       handleFinish();
     }, 120000);
 
-    return () => clearTimeout(safetyTimer);
+    return () => {
+      clearTimeout(safetyTimer);
+    };
   }, [handleFinish, onComplete]);
+
+  const toggleSound = () => {
+    if (videoRef.current) {
+      const nextMuted = !videoRef.current.muted;
+      videoRef.current.muted = nextMuted;
+      videoRef.current.volume = 1.0;
+      setIsAudioActive(!nextMuted);
+    }
+  };
 
   return (
     <div
@@ -194,6 +262,28 @@ export default function ThreeSplashScreen({ onComplete }: ThreeSplashScreenProps
         }}
         className="w-full h-full object-cover sm:object-contain bg-black relative z-10"
       />
+
+      {/* Sound Toggle Control (Top Right) */}
+      <div className="absolute top-6 right-6 z-40 flex items-center gap-2">
+        <button
+          type="button"
+          onClick={toggleSound}
+          className="p-3 rounded-full bg-black/40 hover:bg-black/60 text-white/90 hover:text-white backdrop-blur-md border border-white/20 transition-all shadow-xl cursor-pointer flex items-center gap-2 text-xs font-medium"
+          title={isAudioActive ? "Mute audio" : "Unmute audio"}
+        >
+          {isAudioActive ? (
+            <>
+              <Volume2 className="w-4 h-4 text-emerald-400 animate-pulse" />
+              <span className="hidden sm:inline text-white/90 font-medium">Sound Active</span>
+            </>
+          ) : (
+            <>
+              <VolumeX className="w-4 h-4 text-amber-300" />
+              <span className="hidden sm:inline text-amber-200 font-medium">Tap for Sound</span>
+            </>
+          )}
+        </button>
+      </div>
 
       {/* 2. Whisper-Light Three.js WebGL Dust Layer (Zero CPU overhead) */}
       <div
