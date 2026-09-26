@@ -1143,4 +1143,6 @@ def export_translation_file(data: Dict[str, Any]):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    import os
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run("Backend.main:app", host="0.0.0.0", port=port, reload=True)
