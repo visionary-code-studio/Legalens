@@ -190,10 +190,10 @@ export default function ThreeSplashScreen({ onComplete }: ThreeSplashScreenProps
         });
     }
 
-    // Safety timeout (14s) giving the 10s video full time to complete if onEnded is delayed
+    // Generous safety timeout (32s) giving the 22.3s @LegalLens.mp4 video full time to complete
     const safetyTimer = setTimeout(() => {
       handleFinish();
-    }, 14000);
+    }, 32000);
 
     return () => {
       clearTimeout(safetyTimer);
@@ -211,14 +211,16 @@ export default function ThreeSplashScreen({ onComplete }: ThreeSplashScreenProps
       {/* 1. Core Cinematic Video Background - Hardware GPU Accelerated */}
       <video
         ref={videoRef}
-        src="/Splash.mp4"
+        src="/@LegalLens.mp4"
         autoPlay
         playsInline
         preload="auto"
         onEnded={handleFinish}
         onError={() => {
-          // Do not abruptly dismiss if error happens; let safety timer or complete handle
-          console.warn("Splash video load note; continuing seamlessly");
+          if (videoRef.current && !videoRef.current.src.endsWith("/LegalLens.mp4")) {
+            videoRef.current.src = "/LegalLens.mp4";
+            videoRef.current.play().catch(() => {});
+          }
         }}
         style={{
           transform: "translateZ(0)",
