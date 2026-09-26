@@ -33,6 +33,7 @@ export default function LoginPage() {
       const data = await res.json();
       localStorage.setItem("legalens_user", JSON.stringify(data.user));
       localStorage.setItem("legalens_auth_token", data.token);
+      localStorage.setItem("legalens_auth_type", "login");
       router.push("/dashboard");
     } catch (err: unknown) {
       if (err instanceof Error) {
@@ -46,7 +47,7 @@ export default function LoginPage() {
   };
 
   const fillDemoCredentials = () => {
-    setEmail("vaibhav@legalens.ai");
+    setEmail("raju@legalens.ai");
     setPassword("Legalens@2026");
     setError(null);
   };
@@ -158,7 +159,7 @@ export default function LoginPage() {
               onClick={fillDemoCredentials}
               className="text-[11px] font-semibold text-neutral-600 hover:text-black hover:underline cursor-pointer transition-colors"
             >
-              Use Demo Credentials (Vaibhav Shaw)
+              Use Demo Credentials (Raju Srivastav)
             </button>
           </div>
 

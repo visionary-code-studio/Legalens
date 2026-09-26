@@ -34,16 +34,16 @@ export default function Header() {
         <Link href="/contact" className="hover:text-black transition-colors">Contact</Link>
       </nav>
 
-      {/* Right Controls: Auth Actions exact as Mockup */}
+      {/* Right Controls: Auth Actions */}
       <div className="flex items-center gap-3">
         <Link
-          href="/dashboard"
+          href="/login"
           className="text-[14px] font-medium px-4 py-2 text-neutral-800 hover:text-black transition-colors"
         >
           Login
         </Link>
         <Link
-          href="/dashboard"
+          href="/signup"
           className="text-[14px] font-medium px-5 py-2 rounded-full bg-black text-white hover:bg-neutral-800 transition-colors shadow-sm"
         >
           Sign Up

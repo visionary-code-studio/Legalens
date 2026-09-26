@@ -33,19 +33,27 @@ def seed_default_data():
     from Backend.database import SessionLocal
     db = SessionLocal()
     try:
-        user = db.query(User).filter(User.email == "vaibhav@legalens.ai").first()
+        # Migrate any legacy user records to Raju Srivastav
+        legacy_users = db.query(User).filter(User.full_name == "Vaibhav Shaw").all()
+        for u in legacy_users:
+            u.full_name = "Raju Srivastav"
+            u.email = "raju@legalens.ai"
+            u.avatar_initials = "RS"
+        db.commit()
+
+        user = db.query(User).filter(User.email == "raju@legalens.ai").first()
         if not user:
             default_user = User(
-                id="user_vaibhav_default",
-                email="vaibhav@legalens.ai",
+                id="user_raju_default",
+                email="raju@legalens.ai",
                 hashed_password=hashlib.sha256("Legalens@2026".encode()).hexdigest(),
-                full_name="Vaibhav Shaw",
+                full_name="Raju Srivastav",
                 phone="+91 98765 43210",
-                organization="Legal Aid Cell & Civic Research",
-                role="Legal Advocate & Researcher",
+                organization="Srivastav Legal & Associates",
+                role="Legal Practitioner & Citizen",
                 plan="Free Plan",
                 preferred_language="Hindi (हिन्दी)",
-                avatar_initials="V",
+                avatar_initials="RS",
                 documents_analyzed=14,
                 queries_asked=38
             )
@@ -136,10 +144,10 @@ class ExplainRequest(BaseModel):
 class SignupRequest(BaseModel):
     email: str
     password: str
-    full_name: Optional[str] = "Vaibhav Shaw"
+    full_name: Optional[str] = "Raju Srivastav"
     phone: Optional[str] = "+91 98765 43210"
-    organization: Optional[str] = "Legal Aid Cell & Civic Research"
-    role: Optional[str] = "Legal Advocate & Researcher"
+    organization: Optional[str] = "Srivastav Legal & Associates"
+    role: Optional[str] = "Legal Practitioner & Citizen"
     preferred_language: Optional[str] = "Hindi (हिन्दी)"
 
 class LoginRequest(BaseModel):
@@ -320,7 +328,7 @@ async def upload_document(
     except Exception as e:
         print(f"[Upload] File persist error: {e}")
 
-    effective_user_id = user_id if user_id else "user_vaibhav_default"
+    effective_user_id = user_id if user_id else "user_raju_default"
     user_seal = hashlib.sha256(f"{effective_user_id}_{doc_id}_{filename}".encode()).hexdigest()
 
     # Create Document record
@@ -932,8 +940,10 @@ def login(req: LoginRequest, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email.ilike(email_clean)).first()
     if not user or user.hashed_password != hashed_pw:
         # Check standard demo credentials
-        if email_clean in ["vaibhav@legalens.ai", "demo@legalens.ai"] and req.password in ["Legalens@2026", "password", "demo", "admin"]:
-            user = db.query(User).filter(User.id == "user_vaibhav_default").first()
+        if email_clean in ["raju@legalens.ai", "vaibhav@legalens.ai", "demo@legalens.ai"] and req.password in ["Legalens@2026", "password", "demo", "admin"]:
+            user = db.query(User).filter(User.full_name == "Raju Srivastav").first()
+            if not user:
+                user = db.query(User).first()
         else:
             raise HTTPException(status_code=401, detail="Invalid email or password.")
 

@@ -29,7 +29,12 @@ interface CompareItem {
 export default function CompareLensPage() {
   const [fileA, setFileA] = useState<File | null>(null);
   const [fileB, setFileB] = useState<File | null>(null);
-  const [docAName, setDocAName] = useState<string>("Contract_v1.pdf");
+  const [docAName, setDocAName] = useState<string>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("legalens_active_doc_name") || "Contract_v1.pdf";
+    }
+    return "Contract_v1.pdf";
+  });
   const [docBName, setDocBName] = useState<string>("Contract_v2.pdf");
 
   const [filter, setFilter] = useState<"All" | "Modified" | "Added" | "Removed">("All");

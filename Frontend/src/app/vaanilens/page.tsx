@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import DashboardTopNav from "@/components/DashboardTopNav";
 import VernacularDropdown from "@/components/VernacularDropdown";
 import { resilientFetch } from "@/lib/api";
@@ -61,6 +61,22 @@ export default function VaaniLensPage() {
   const [copiedOriginal, setCopiedOriginal] = useState(false);
   const [copiedTranslated, setCopiedTranslated] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const activeDocId = localStorage.getItem("legalens_active_doc_id");
+      if (activeDocId) {
+        resilientFetch(`/api/documents/${activeDocId}`)
+          .then((res) => (res.ok ? res.json() : null))
+          .then((data) => {
+            if (data && data.full_text) {
+              setText(data.full_text.slice(0, 500));
+            }
+          })
+          .catch(() => {});
+      }
+    }
+  }, []);
 
   // Handle snippet translation
   const handleTranslateSnippet = async (targetLang: string) => {

@@ -54,7 +54,7 @@ export default function ActionLensPage() {
   ]);
 
   useEffect(() => {
-    resilientFetch("/api/actionlens/plan")
+    resilientFetch(`/api/actionlens/plan?document_name=${encodeURIComponent(docName)}`)
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (data) {
@@ -89,7 +89,7 @@ export default function ActionLensPage() {
       .catch(() => {
         // Fallback gracefully kept
       });
-  }, []);
+  }, [docName]);
 
   const toggleCheck = (id: number) => {
     setChecklist((prev) =>

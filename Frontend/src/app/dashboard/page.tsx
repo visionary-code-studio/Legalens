@@ -45,10 +45,18 @@ export default function DashboardPage() {
   const [uploadSuccess, setUploadSuccess] = useState<string | null>(null);
   const [recentDocs, setRecentDocs] = useState<RecentDoc[]>([]);
   const [userName, setUserName] = useState<string>("Raju Srivastav");
+  const [authType, setAuthType] = useState<"login" | "signup">("login");
   const dropFileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     try {
+      const type = localStorage.getItem("legalens_auth_type");
+      if (type === "signup") {
+        setAuthType("signup");
+      } else {
+        setAuthType("login");
+      }
+
       const userStr = localStorage.getItem("legalens_user");
       if (userStr) {
         const u = JSON.parse(userStr);
@@ -205,10 +213,14 @@ export default function DashboardPage() {
           {/* Greeting */}
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-neutral-900">
-              Welcome back, {userName}!
+              {authType === "signup"
+                ? `Thanks for Choosing Legalens ${userName}`
+                : `Welcome ${userName}`}
             </h1>
             <p className="text-sm text-neutral-500 mt-0.5">
-              Your legal clarity journey continues.
+              {authType === "signup"
+                ? "Your journey to simplified legal literacy starts today."
+                : "Your legal clarity journey continues."}
             </p>
           </div>
 

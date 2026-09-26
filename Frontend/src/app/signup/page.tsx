@@ -56,6 +56,7 @@ export default function SignupPage() {
       const data = await res.json();
       localStorage.setItem("legalens_user", JSON.stringify(data.user));
       localStorage.setItem("legalens_auth_token", data.token);
+      localStorage.setItem("legalens_auth_type", "signup");
       router.push("/dashboard");
     } catch (err: unknown) {
       if (err instanceof Error) {

@@ -82,7 +82,15 @@ export default function DigitalLensPage() {
   const [successNotice, setSuccessNotice] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [result, setResult] = useState<VerificationResult>(DEFAULT_VERDICT);
+  const [result, setResult] = useState<VerificationResult>(() => {
+    if (typeof window !== "undefined") {
+      const activeName = localStorage.getItem("legalens_active_doc_name");
+      if (activeName) {
+        return { ...DEFAULT_VERDICT, document_name: activeName };
+      }
+    }
+    return DEFAULT_VERDICT;
+  });
 
   const formatFileSize = (bytes: number) => {
     if (bytes < 1024) return `${bytes} B`;

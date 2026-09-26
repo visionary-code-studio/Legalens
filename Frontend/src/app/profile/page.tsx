@@ -23,21 +23,27 @@ export default function ProfilePage() {
   const [saveSuccess, setSaveSuccess] = useState(false);
 
   const [formData, setFormData] = useState({
-    id: "user_vaibhav_default",
-    full_name: "Vaibhav Shaw",
-    email: "vaibhav@legalens.ai",
+    id: "user_raju_default",
+    full_name: "Raju Srivastav",
+    email: "raju@legalens.ai",
     phone: "+91 98765 43210",
-    organization: "Legal Aid Cell & Civic Research",
-    role: "Legal Advocate & Researcher",
+    organization: "Srivastav Legal & Associates",
+    role: "Legal Practitioner & Citizen",
     plan: "Free Plan",
     preferred_language: "Hindi (हिन्दी)",
-    avatar_initials: "V",
+    avatar_initials: "RS",
     documents_analyzed: 14,
     queries_asked: 38,
     created_at: "September 2026"
   });
 
   useEffect(() => {
+    try {
+      const stored = localStorage.getItem("legalens_user");
+      if (stored) {
+        setFormData(prev => ({ ...prev, ...JSON.parse(stored) }));
+      }
+    } catch {}
     fetchProfile();
   }, []);
 
