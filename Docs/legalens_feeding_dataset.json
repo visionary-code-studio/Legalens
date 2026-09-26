@@ -1,0 +1,144 @@
+{
+  "project": "Legalens",
+  "version": "1.0.0",
+  "purpose": "Comprehensive Prompt & Contract Feeding Dataset for Legalens AI Evaluation",
+  "benchmark_scenario": "Executive Employment & Restrictive Covenants Agreement (Indian Jurisdiction)",
+  
+  "document": {
+    "document_id": "doc_feed_benchmark_001",
+    "filename": "Senior_Software_Engineer_Employment_Agreement.pdf",
+    "jurisdiction": "IN",
+    "governing_law": "Indian Contract Act, 1872",
+    "parties": [
+      {
+        "role": "Employer",
+        "entity_name": "Nexora Technologies Private Limited",
+        "jurisdiction": "Bengaluru, Karnataka"
+      },
+      {
+        "role": "Employee",
+        "entity_name": "Arjun Sharma",
+        "jurisdiction": "Bengaluru, Karnataka"
+      }
+    ],
+    "full_text": "THIS EMPLOYMENT AGREEMENT is made on this 1st day of October 2026, by and between Nexora Technologies Pvt. Ltd., having its registered office at Outer Ring Road, Bengaluru ('Company'), and Arjun Sharma, residing at Indiranagar, Bengaluru ('Employee').\n\nWHEREAS the Company wishes to employ the Employee, and the Employee wishes to accept employment under the following binding terms and conditions:\n\n1. SCOPE OF EMPLOYMENT AND DUTIES\nThe Employee shall serve as Senior Staff Software Engineer and shall devote 100% of their working time, skills, and attention exclusively to the business of the Company. The Employee shall not engage in any secondary moonlighting or freelance activities without prior written consent.\n\n2. COMPENSATION AND PENAL INTEREST\nThe Company shall pay a monthly gross compensation of INR 2,50,000. Any loans or sign-on bonuses disbursed must be repaid within 15 days upon demand, failing which penal interest at 18% per annum shall accrue immediately.\n\n3. PROPRIETARY INFORMATION AND CONFIDENTIALITY\nThe Employee acknowledges that during employment they will have access to trade secrets, source code, and client records ('Proprietary Data'). The Employee agrees to maintain strict confidentiality indefinitely in perpetuity, even after termination of employment, and shall not disclose any Proprietary Data without written authorization.\n\n4. INTELLECTUAL PROPERTY ASSIGNMENT\nAll inventions, discoveries, software code, algorithms, and documentation created by the Employee, whether during working hours or using personal equipment if related to the Company's current or prospective business, shall immediately and irrevocably become the exclusive sole property of the Company worldwide.\n\n5. POST-EMPLOYMENT RESTRICTIVE COVENANTS (NON-COMPETE)\nFor a period of 18 (eighteen) months following the termination of employment for any reason, the Employee shall not, directly or indirectly, work for, consult, advise, or invest in any competing technology company operating within the territory of India or South Asia.\n\n6. TERMINATION AND NOTICE PERIOD\nEither party may terminate this agreement by providing 90 (ninety) calendar days prior written notice. The Company reserves the unilateral right to waive the notice period and immediately terminate without severance in the event of suspected underperformance or alleged breach of confidentiality.\n\n7. INDEMNIFICATION AND LIABILITY\nThe Employee agrees to indemnify, defend, and hold harmless the Company, its directors, and affiliates from and against any and all claims, losses, or legal liabilities arising from any alleged breach of this agreement, with no cap or ceiling on financial liability.\n\n8. GOVERNING LAW AND EXCLUSIVE DISPUTE JURISDICTION\nThis Agreement shall be governed by and construed in accordance with the substantive laws of India. Any and all disputes arising hereunder shall be submitted to the exclusive jurisdiction of the competent courts in Bengaluru, Karnataka, with arbitration conducted in English under the Arbitration and Conciliation Act, 1996."
+  },
+
+  "module_prompts_and_feeding": {
+    "lexilens": {
+      "module_name": "LexiLens",
+      "target_endpoint": "/api/lexilens/explain",
+      "test_clause": "The Employee agrees to hold and maintain strict confidentiality indefinitely in perpetuity, even after termination of employment, and all inventions created on personal equipment related to prospective business shall irrevocably become the exclusive sole property of the Company.",
+      "expected_output_keys": [
+        "plain_explanation",
+        "key_points",
+        "important_terms",
+        "parties_affected",
+        "disclaimer"
+      ],
+      "evaluation_criteria": "Simplifies 'in perpetuity' and 'prospective business' into plain English without losing the perpetual duration caveat."
+    },
+
+    "clauselens": {
+      "module_name": "ClauseLens",
+      "target_endpoint": "/api/clauselens/detect",
+      "test_input": {
+        "document_name": "Senior_Software_Engineer_Employment_Agreement.pdf",
+        "clauses_to_flag": [
+          {
+            "clause_title": "Post-Employment Non-Compete",
+            "expected_risk": "High Risk",
+            "statutory_context": "Section 27 of Indian Contract Act 1872 renders agreements in restraint of trade void post-employment."
+          },
+          {
+            "clause_title": "Indemnification & Unlimited Liability",
+            "expected_risk": "High Risk",
+            "statutory_context": "Unlimited financial indemnity on an individual employee without negligence proof."
+          },
+          {
+            "clause_title": "90 Days Termination Notice",
+            "expected_risk": "Medium Risk",
+            "statutory_context": "Unilateral notice waiver clause favor Company over Employee."
+          },
+          {
+            "clause_title": "Governing Law & Bengaluru Courts",
+            "expected_risk": "Low Risk",
+            "statutory_context": "Standard jurisdictional selection clause."
+          }
+        ]
+      }
+    },
+
+    "comparelens": {
+      "module_name": "CompareLens",
+      "target_endpoint": "/api/comparelens/compare",
+      "version_a_title": "Original_Draft_v1.pdf",
+      "version_b_title": "Revised_Addendum_v2.pdf",
+      "sample_diff_payload": {
+        "text_a": "Clause 5: Non-compete restriction shall apply for 6 months within Bengaluru.",
+        "text_b": "Clause 5: Non-compete restriction shall apply for 18 months across India and South Asia.",
+        "expected_change": "Modified",
+        "expected_flag": "Triple duration increase (6m -> 18m) and expanded geographic territory."
+      }
+    },
+
+    "vaanilens": {
+      "module_name": "VaaniLens",
+      "target_endpoint": "/api/vaanilens/translate",
+      "test_input": {
+        "text": "Any loans or sign-on bonuses disbursed must be repaid within 15 days upon demand, failing which penal interest at 18% per annum shall accrue immediately.",
+        "target_languages": ["Hindi", "Bengali", "Tamil", "Telugu", "Marathi"]
+      },
+      "expected_preserved_terms": [
+        { "term": "Penal Interest", "indic_definition": "दंडात्मक ब्याज (विलंब शुल्क)" },
+        { "term": "Accrue", "indic_definition": "देय होना या जुड़ना" }
+      ]
+    },
+
+    "digitallens": {
+      "module_name": "DigitalLens",
+      "target_endpoint": "/api/digitallens/verify",
+      "metadata_payload": {
+        "filename": "Senior_Software_Engineer_Employment_Agreement.pdf",
+        "creator": "Adobe Acrobat Pro 2024",
+        "digital_signature_present": true,
+        "signature_authority": "eMudhra DSC Class 3",
+        "font_anomalies": false,
+        "official_gazette_number": "N/A (Private Employment Agreement)"
+      },
+      "expected_verdict": "Likely Authentic"
+    },
+
+    "querylens": {
+      "module_name": "QueryLens",
+      "target_endpoint": "/api/querylens/ask",
+      "test_questions": [
+        {
+          "question": "Can I work as a freelancer or take weekend coding gigs?",
+          "expected_answer_summary": "No, Clause 1 strictly requires 100% of working attention and explicitly bans moonlighting or freelancing without prior written consent.",
+          "expected_citation": "Clause 1 (Scope of Employment and Duties)"
+        },
+        {
+          "question": "If I leave the company, can I immediately join another tech startup?",
+          "expected_answer_summary": "Clause 5 imposes an 18-month non-compete across India. However, under Section 27 of the Indian Contract Act, post-employment non-compete clauses are generally considered legally void.",
+          "expected_citation": "Clause 5 (Post-Employment Restrictive Covenants)"
+        }
+      ]
+    },
+
+    "actionlens": {
+      "module_name": "ActionLens",
+      "target_endpoint": "/api/actionlens/generate",
+      "expected_checklist_items": [
+        "Request negotiation to reduce notice period from 90 days to 30 days.",
+        "Request mutual limitation of liability instead of unlimited employee indemnity.",
+        "Exclude pre-existing personal open-source projects from intellectual property assignment."
+      ],
+      "expected_questions_for_lawyer": [
+        "Is the 18-month nationwide non-compete clause enforceable against me in Karnataka courts?",
+        "How can I carve out an indemnity cap to protect my personal assets?",
+        "What constitutes 'cause' under the unilateral termination notice waiver?"
+      ]
+    }
+  }
+}
