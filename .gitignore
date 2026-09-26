@@ -57,7 +57,6 @@ desktop.ini
 # Large raw media files
 /legalens video.mp4
 Frontend/public/legalens video.mp4
-Frontend/public/legalens-video.mp4
 /scratch/
 
 # Local test documents (strictly ignored from git)

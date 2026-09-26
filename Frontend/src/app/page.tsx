@@ -9,34 +9,27 @@ import ThreeSplashScreen from "@/components/ThreeSplashScreen";
 import HeroWebGL from "@/components/HeroWebGL";
 import { ArrowRight, Play } from "lucide-react";
 
+// In-memory navigation tracker: when navigating around the app (e.g. from /dashboard back to /),
+// the splash screen will NOT replay, but on initial load or browser refresh it plays smoothly!
+let splashAlreadyShown = false;
+
 export default function LandingPage() {
-  // Splash screen plays once on initial website visit, never when returning from other pages
-  const [showSplash, setShowSplash] = useState<boolean>(() => {
-    if (typeof window !== "undefined") {
-      const completed =
-        sessionStorage.getItem("legalens_splash_completed") ||
-        localStorage.getItem("legalens_splash_completed");
-      return !completed;
-    }
-    return false;
-  });
+  const [showSplash, setShowSplash] = useState<boolean>(() => !splashAlreadyShown);
 
   useEffect(() => {
+    // Clear any permanent lock stored in previous sessions so splash screen always works on initial load
     if (typeof window !== "undefined") {
-      const completed =
-        sessionStorage.getItem("legalens_splash_completed") ||
-        localStorage.getItem("legalens_splash_completed");
-      if (completed) {
-        setShowSplash(false);
+      try {
+        localStorage.removeItem("legalens_splash_completed");
+        sessionStorage.removeItem("legalens_splash_completed");
+      } catch {
+        // ignore
       }
     }
   }, []);
 
   const handleSplashComplete = () => {
-    if (typeof window !== "undefined") {
-      sessionStorage.setItem("legalens_splash_completed", "true");
-      localStorage.setItem("legalens_splash_completed", "true");
-    }
+    splashAlreadyShown = true;
     setShowSplash(false);
   };
 
