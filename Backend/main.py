@@ -592,6 +592,37 @@ def compare_documents(req: CompareRequest, db: Session = Depends(get_db)):
 
     return ai_client.compare_documents(text_a, text_b, doc_a_name=name_a, doc_b_name=name_b)
 
+@app.post("/api/comparelens/upload-and-compare")
+async def upload_and_compare_documents(
+    file_a: UploadFile = File(...),
+    file_b: UploadFile = File(...)
+):
+    """CompareLens: Upload two files (old vs revised) and run live AI comparison."""
+    try:
+        content_a = await file_a.read()
+        content_b = await file_b.read()
+
+        name_a = file_a.filename or "Contract_Previous.pdf"
+        name_b = file_b.filename or "Contract_Updated.pdf"
+
+        text_a = DocumentTranslationEngine.extract_text_from_file(name_a, content_a)
+        text_b = DocumentTranslationEngine.extract_text_from_file(name_b, content_b)
+
+        if not text_a:
+            text_a = content_a.decode("utf-8", errors="replace")[:4000]
+        if not text_b:
+            text_b = content_b.decode("utf-8", errors="replace")[:4000]
+
+        return ai_client.compare_documents(
+            text_a=text_a,
+            text_b=text_b,
+            doc_a_name=name_a,
+            doc_b_name=name_b
+        )
+    except Exception as e:
+        print(f"[CompareLens] Upload and compare error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.post("/api/vaanilens/translate")
 def translate_legal(req: TranslateRequest):
     return ai_client.translate_and_explain(req.text, req.target_language)
@@ -599,6 +630,49 @@ def translate_legal(req: TranslateRequest):
 @app.post("/api/digitallens/verify")
 def verify_document(metadata: Dict[str, Any]):
     return ai_client.verify_document(metadata)
+
+@app.post("/api/digitallens/audit-file")
+async def audit_document_file(
+    file: UploadFile = File(...)
+):
+    """DigitalLens: Upload any legal document, order, or gazette to audit digital authenticity and tampering."""
+    try:
+        content = await file.read()
+        filename = file.filename or "Document.pdf"
+        file_size_kb = round(len(content) / 1024, 1)
+
+        pages_count = 1
+        producer = "Standard Legal PDF Engine"
+        creation_date = "Recent"
+
+        ext = Path(filename).suffix.lower()
+        if ext == ".pdf":
+            try:
+                reader = PdfReader(io.BytesIO(content))
+                pages_count = len(reader.pages)
+                if reader.metadata:
+                    producer = str(reader.metadata.get("/Producer", producer))
+                    creation_date = str(reader.metadata.get("/CreationDate", creation_date))
+            except Exception as pe:
+                print(f"[DigitalLens] Metadata parse error: {pe}")
+
+        extracted_text = DocumentTranslationEngine.extract_text_from_file(filename, content)
+        if not extracted_text:
+            extracted_text = content.decode("utf-8", errors="replace")[:2500]
+
+        metadata = {
+            "filename": filename,
+            "file_size_kb": file_size_kb,
+            "pages": pages_count,
+            "producer": producer,
+            "creation_date": creation_date,
+            "mime_type": file.content_type or "application/octet-stream"
+        }
+
+        return ai_client.verify_document(metadata=metadata, document_text=extracted_text)
+    except Exception as e:
+        print(f"[DigitalLens] Audit file error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/querylens/query")
 @app.post("/api/querylens/ask")

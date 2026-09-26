@@ -62,15 +62,15 @@ export default function LandingPage() {
                   <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                 </Link>
 
-                <button
-                  type="button"
+                <Link
+                  href="/demo"
                   className="inline-flex items-center gap-2.5 px-6 py-3.5 rounded-full border border-neutral-300 bg-white text-neutral-800 font-medium hover:border-black transition-colors shadow-2xs group"
                 >
                   <div className="w-5 h-5 rounded-full bg-neutral-100 flex items-center justify-center group-hover:bg-black group-hover:text-white transition-colors">
                     <Play className="w-2.5 h-2.5 fill-current ml-0.5" />
                   </div>
                   <span>Watch Demo</span>
-                </button>
+                </Link>
               </div>
 
               {/* Metrics Row */}

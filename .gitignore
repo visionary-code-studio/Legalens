@@ -53,3 +53,8 @@ desktop.ini
 .idea/
 *.swp
 *.swo
+
+# Large raw media files in root
+/legalens video.mp4
+/scratch/
+
