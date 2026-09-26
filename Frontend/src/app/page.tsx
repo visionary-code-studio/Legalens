@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import Header from "@/components/Header";
@@ -10,10 +10,32 @@ import HeroWebGL from "@/components/HeroWebGL";
 import { ArrowRight, Play } from "lucide-react";
 
 export default function LandingPage() {
-  const [showSplash, setShowSplash] = useState<boolean>(true);
-  const [hasEntered, setHasEntered] = useState<boolean>(false);
+  // Splash screen plays full once on initial website visit, never when returning from other pages
+  const [showSplash, setShowSplash] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      const completed = sessionStorage.getItem("legalens_splash_completed");
+      return !completed;
+    }
+    return false;
+  });
+  const [hasEntered, setHasEntered] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      return Boolean(sessionStorage.getItem("legalens_splash_completed"));
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && sessionStorage.getItem("legalens_splash_completed")) {
+      setShowSplash(false);
+      setHasEntered(true);
+    }
+  }, []);
 
   const handleSplashComplete = () => {
+    if (typeof window !== "undefined") {
+      sessionStorage.setItem("legalens_splash_completed", "true");
+    }
     setShowSplash(false);
     // Trigger smooth homepage element entrance transition
     setTimeout(() => {

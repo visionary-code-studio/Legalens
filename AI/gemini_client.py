@@ -2,6 +2,7 @@ import os
 import json
 import re
 import time
+from pathlib import Path
 from typing import Dict, Any, Optional, List, Iterator
 from dotenv import load_dotenv
 from google import genai
@@ -19,6 +20,12 @@ from AI.prompts.lens_prompts import (
 from AI.security.pii_sanitizer import PIISanitizer
 from AI.security.jailbreak_guard import JailbreakGuard
 
+root_env = Path(__file__).resolve().parent.parent / ".env"
+backend_env = Path(__file__).resolve().parent.parent / "Backend" / ".env"
+if root_env.exists():
+    load_dotenv(dotenv_path=root_env)
+if backend_env.exists():
+    load_dotenv(dotenv_path=backend_env)
 load_dotenv()
 
 def get_gemini_api_key() -> str:
@@ -40,7 +47,7 @@ class LegalensAIClient:
 
     def __init__(self, api_key: Optional[str] = None):
         self.api_key = api_key or get_gemini_api_key()
-        self.model_name = "gemini-3.5-flash-lite"
+        self.model_name = "gemini-flash-latest"
         self.client = None
         if self.api_key:
             try:

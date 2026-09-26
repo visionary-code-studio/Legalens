@@ -129,7 +129,7 @@ class DocumentTranslationEngine:
             except Exception as e:
                 print(f"[DocumentTranslationEngine] DOCX parsing error: {e}")
 
-        elif ext in [".txt", ".md", ".csv", ".json"]:
+        elif ext in [".txt", ".md", ".csv", ".json", ".rtf"]:
             try:
                 return file_bytes.decode("utf-8", errors="replace").strip()
             except Exception as e:
@@ -156,6 +156,19 @@ class DocumentTranslationEngine:
                 "4. Restrictive Covenants: For a duration of 12 months post-separation, the Employee shall not solicit Company clientele or direct personnel.\n\n"
                 "5. Governing Law and Arbitration: This agreement is governed by the laws of India, subject to exclusive court jurisdiction and single-member arbitration seated in Bengaluru."
             )
+
+        # Fallback: Recover readable strings from any binary or non-standard file bytes
+        try:
+            raw_text = file_bytes.decode("utf-8", errors="ignore")
+            if len(raw_text.strip()) > 40:
+                return raw_text.strip()
+            # Extract printable character sequences (ASCII strings)
+            ascii_strings = re.findall(r'[\x20-\x7E\s]{4,}', file_bytes.decode("latin-1", errors="ignore"))
+            recovered = " ".join([s.strip() for s in ascii_strings if len(s.strip()) > 3])
+            if len(recovered) > 50:
+                return recovered
+        except Exception:
+            pass
 
         # Fallback default text if extraction returned blank
         return (

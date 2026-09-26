@@ -10,8 +10,9 @@ export const getApiBaseUrl = (): string => {
       return process.env.NEXT_PUBLIC_API_URL.replace(/\/+$/, "");
     }
 
-    // 2. Default to 127.0.0.1:8000 (preferred on Windows to avoid IPv6 localhost resolution mismatch)
-    return "http://127.0.0.1:8000";
+    // 2. Match the current browser hostname (localhost, 127.0.0.1, or local IP)
+    const hostname = window.location.hostname || "localhost";
+    return `http://${hostname}:8000`;
   }
 
   return process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";

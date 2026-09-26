@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import DashboardTopNav from "@/components/DashboardTopNav";
 import DocumentPreviewModal from "@/components/DocumentPreviewModal";
 import { resilientFetch } from "@/lib/api";
@@ -14,7 +14,8 @@ import {
   FileText,
   ExternalLink,
   Sparkles,
-  Loader2
+  Loader2,
+  UploadCloud
 } from "lucide-react";
 
 interface ClauseItem {
@@ -155,13 +156,89 @@ export default function ClauseLensPage() {
   const [downloading, setDownloading] = useState<boolean>(false);
   const [fullDocText, setFullDocText] = useState<string>("");
   const [activeDocId, setActiveDocId] = useState<string>("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleUploadContract = async (file: File) => {
+    setLoading(true);
+    setDocName(file.name);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await resilientFetch("/api/documents/upload", {
+        method: "POST",
+        body: formData
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.document) {
+          setActiveDocId(data.document.document_id);
+          if (data.document.full_text) setFullDocText(data.document.full_text);
+          localStorage.setItem("legalens_active_doc_id", data.document.document_id);
+          localStorage.setItem("legalens_active_doc_name", data.document.filename);
+          if (data.document.full_text) localStorage.setItem("legalens_active_doc_text", data.document.full_text);
+        }
+        if (data.clauses && data.clauses.length > 0) {
+          const mapped: ClauseItem[] = data.clauses.map((c: any, idx: number) => ({
+            id: idx + 1,
+            title: c.title || "Contract Clause",
+            risk: (c.risk as any) || "Medium Risk",
+            meaning: c.meaning || "Standard legal stipulation.",
+            who: c.who_it_affects || "Both Parties",
+            obligations: Array.isArray(c.key_obligations) ? c.key_obligations : [c.key_obligations],
+            concerns: Array.isArray(c.potential_concerns) ? c.potential_concerns : [],
+            section: c.section || `Clause ${idx + 1}`
+          }));
+          setClauses(mapped);
+          setSelectedId(1);
+          setLoading(false);
+          return;
+        }
+      }
+    } catch {
+      // Fallback to text detection
+    }
+
+    try {
+      const text = await file.text();
+      setFullDocText(text);
+      const form = new FormData();
+      form.append("document_text", text);
+      const detectRes = await resilientFetch("/api/clauselens/detect", {
+        method: "POST",
+        body: form
+      });
+      if (detectRes.ok) {
+        const detectData = await detectRes.json();
+        if (detectData && detectData.clauses && detectData.clauses.length > 0) {
+          const mapped: ClauseItem[] = detectData.clauses.map((c: any, idx: number) => ({
+            id: c.clause_id || idx + 1,
+            title: c.clause_title || c.title || "Contract Clause",
+            risk: (c.risk_level as any) || (c.risk as any) || "Medium Risk",
+            meaning: c.meaning || "Standard legal stipulation.",
+            who: c.who_it_affects || "Both Parties",
+            obligations: Array.isArray(c.key_obligations) ? c.key_obligations : [c.key_obligations],
+            concerns: Array.isArray(c.potential_concerns) ? c.potential_concerns : [],
+            section: c.relevant_section || c.section || `Clause ${idx + 1}`
+          }));
+          setClauses(mapped);
+          setSelectedId(1);
+        }
+      }
+    } catch {
+      // Keep state
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     // Check if URL parameter or localStorage has active document
     const params = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
     const docId = params?.get("doc_id") || localStorage.getItem("legalens_active_doc_id");
     const storedName = localStorage.getItem("legalens_active_doc_name");
+    const storedText = localStorage.getItem("legalens_active_doc_text");
     if (storedName) setDocName(storedName);
+    if (storedText) setFullDocText(storedText);
     if (docId) setActiveDocId(docId);
 
     if (docId) {
@@ -293,19 +370,40 @@ export default function ClauseLensPage() {
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={handleDownloadReport}
-            disabled={downloading}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white border border-neutral-200 text-xs font-semibold text-neutral-800 hover:border-black transition-colors shadow-2xs self-start sm:self-auto cursor-pointer"
-          >
-            {downloading ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            ) : (
-              <Download className="w-3.5 h-3.5" />
-            )}
-            <span>Download Report</span>
-          </button>
+          <div className="flex items-center gap-2 self-start sm:self-auto">
+            <input
+              type="file"
+              ref={fileInputRef}
+              className="hidden"
+              accept=".pdf,.docx,.doc,.txt,.md"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) handleUploadContract(f);
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={loading}
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-black text-white text-xs font-semibold hover:bg-neutral-800 transition-colors shadow-xs cursor-pointer"
+            >
+              <UploadCloud className="w-3.5 h-3.5" />
+              <span>Upload Contract</span>
+            </button>
+            <button
+              type="button"
+              onClick={handleDownloadReport}
+              disabled={downloading}
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white border border-neutral-200 text-xs font-semibold text-neutral-800 hover:border-black transition-colors shadow-2xs cursor-pointer"
+            >
+              {downloading ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Download className="w-3.5 h-3.5" />
+              )}
+              <span>Download Report</span>
+            </button>
+          </div>
         </div>
 
         {/* 2-Column Split View */}

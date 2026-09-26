@@ -196,16 +196,6 @@ export default function ContactPage() {
                 </div>
               </div>
             </div>
-
-            <div className="p-6 rounded-3xl bg-neutral-100 border border-neutral-200 text-xs text-neutral-600 space-y-2">
-              <div className="font-bold text-neutral-900 flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-neutral-700" />
-                <span>PromptWar Hackathon Edition</span>
-              </div>
-              <p className="leading-relaxed">
-                Legalens is actively developing new document analysis models and regional language transformers. We welcome feedback from legal professionals, researchers, and everyday citizens!
-              </p>
-            </div>
           </div>
         </div>
 

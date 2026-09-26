@@ -287,7 +287,7 @@ export default function DashboardPage() {
                           localStorage.setItem("legalens_active_doc_name", doc.filename);
                           localStorage.setItem("legalens_active_doc_text", doc.full_text);
                           setSelectedFile(doc.filename);
-                          setUploadSuccess("Loaded Senior Software Engineer Employment Agreement (PromptWar Demo Suite)");
+                          setUploadSuccess("Loaded Senior Software Engineer Employment Agreement (Legalens Standard Suite)");
                           fetchRecentDocs();
                         }
                       } catch {

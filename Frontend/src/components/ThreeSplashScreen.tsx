@@ -153,15 +153,16 @@ export default function ThreeSplashScreen({ onComplete }: ThreeSplashScreenProps
     if (playPromise !== undefined) {
       playPromise
         .then(() => {
-          // Playing unmuted successfully
+          // Playing unmuted successfully from start
           setIsAudioActive(true);
         })
         .catch(() => {
           // Browser autoplay policy restricted unmuted playback on reload.
-          // Start video playing, and immediately bind passive motion & focus listeners
-          // so ANY mouse move, scroll, or window focus immediately unmutes audio!
+          // Start video playing muted smoothly so video NEVER stops or cuts off!
           video.muted = true;
-          video.play().catch(handleFinish);
+          video.play().catch(() => {
+            // Ignore play abort errors; video will keep buffering/playing
+          });
           setIsAudioActive(false);
 
           const autoUnmuteOnMotion = () => {
@@ -176,15 +177,13 @@ export default function ThreeSplashScreen({ onComplete }: ThreeSplashScreenProps
           };
 
           const motionEvents = [
+            "pointerdown",
             "pointermove",
             "mousemove",
             "mouseenter",
             "mouseover",
             "wheel",
             "scroll",
-            "focus",
-            "pageshow",
-            "visibilitychange",
             "touchstart",
             "click",
             "keydown"
@@ -193,30 +192,13 @@ export default function ThreeSplashScreen({ onComplete }: ThreeSplashScreenProps
           motionEvents.forEach((evt) => {
             window.addEventListener(evt, autoUnmuteOnMotion, { passive: true, once: true });
           });
-
-          // Also attempt rapid polling to unmute as soon as browser unlocks audio
-          const pollTimer = setInterval(() => {
-            if (videoRef.current && !videoRef.current.paused) {
-              try {
-                videoRef.current.muted = false;
-                if (!videoRef.current.muted) {
-                  setIsAudioActive(true);
-                  clearInterval(pollTimer);
-                }
-              } catch {
-                // Keep polling
-              }
-            }
-          }, 200);
-
-          setTimeout(() => clearInterval(pollTimer), 5000);
         });
     }
 
-    // High timeout (120s) as safety boundary so full video plays to completion
+    // Safety timeout (14s) giving the 10s video full time to complete if onEnded is delayed
     const safetyTimer = setTimeout(() => {
       handleFinish();
-    }, 120000);
+    }, 14000);
 
     return () => {
       clearTimeout(safetyTimer);
@@ -243,18 +225,14 @@ export default function ThreeSplashScreen({ onComplete }: ThreeSplashScreenProps
       {/* 1. Core Cinematic Video Background - Hardware GPU Accelerated */}
       <video
         ref={videoRef}
-        src="/LegalLens.mp4"
+        src="/Splash.mp4"
         autoPlay
         playsInline
         preload="auto"
         onEnded={handleFinish}
         onError={() => {
-          if (videoRef.current && videoRef.current.src.includes("LegalLens.mp4")) {
-            videoRef.current.src = "/Splash.mp4";
-            videoRef.current.play().catch(handleFinish);
-          } else {
-            handleFinish();
-          }
+          // Do not abruptly dismiss if error happens; let safety timer or complete handle
+          console.warn("Splash video load note; continuing seamlessly");
         }}
         style={{
           transform: "translateZ(0)",
@@ -263,12 +241,12 @@ export default function ThreeSplashScreen({ onComplete }: ThreeSplashScreenProps
         className="w-full h-full object-cover sm:object-contain bg-black relative z-10"
       />
 
-      {/* Sound Toggle Control (Top Right) */}
-      <div className="absolute top-6 right-6 z-40 flex items-center gap-2">
+      {/* Top Controls: Sound Toggle & Optional Skip (Top Right) */}
+      <div className="absolute top-6 right-6 z-40 flex items-center gap-3">
         <button
           type="button"
           onClick={toggleSound}
-          className="p-3 rounded-full bg-black/40 hover:bg-black/60 text-white/90 hover:text-white backdrop-blur-md border border-white/20 transition-all shadow-xl cursor-pointer flex items-center gap-2 text-xs font-medium"
+          className="p-2.5 sm:px-3.5 sm:py-2.5 rounded-full bg-black/50 hover:bg-black/75 text-white/90 hover:text-white backdrop-blur-md border border-white/20 transition-all shadow-xl cursor-pointer flex items-center gap-2 text-xs font-medium"
           title={isAudioActive ? "Mute audio" : "Unmute audio"}
         >
           {isAudioActive ? (
@@ -282,6 +260,15 @@ export default function ThreeSplashScreen({ onComplete }: ThreeSplashScreenProps
               <span className="hidden sm:inline text-amber-200 font-medium">Tap for Sound</span>
             </>
           )}
+        </button>
+
+        <button
+          type="button"
+          onClick={handleFinish}
+          className="px-3 py-2 rounded-full bg-black/40 hover:bg-black/65 text-neutral-300 hover:text-white backdrop-blur-md border border-white/15 text-xs font-medium transition-all cursor-pointer shadow-lg"
+          title="Skip intro"
+        >
+          Skip
         </button>
       </div>
 
