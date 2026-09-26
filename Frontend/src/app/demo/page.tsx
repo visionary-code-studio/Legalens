@@ -85,9 +85,10 @@ export default function WatchDemoPage() {
         <div className="relative rounded-3xl overflow-hidden bg-black shadow-2xl border border-neutral-800 group">
           <video
             ref={videoRef}
-            src="/legalens-video.mp4"
+            src="/Legal%20Lens%20Demo.mp4"
             autoPlay
             playsInline
+            controls
             onTimeUpdate={handleTimeUpdate}
             onEnded={() => setIsPlaying(false)}
             onError={() => {
