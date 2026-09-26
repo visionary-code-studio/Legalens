@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Permanent_Marker } from "next/font/google";
 import "./globals.css";
 
@@ -17,6 +17,13 @@ const brushFont = Permanent_Marker({
   variable: "--font-brush",
   subsets: ["latin"],
 });
+
+export const viewport: Viewport = {
+  themeColor: "#0a0a0a",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+};
 
 export const metadata: Metadata = {
   title: "Legalens — Make Yourself Legally Educated",

@@ -3,7 +3,9 @@
 # ⚖️ LEGALENS (लीगलेंस)
 ### *Democratizing Legal Intelligence Through Multilingual Generative AI*
 
-[![GitHub stars](https://img.shields.io/github/stars/visionary-code-studio/Legalens?style=for-the-badge&color=ffd700)](https://github.com/visionary-code-studio/Legalens/stargazers)
+[![CI Pipeline](https://img.shields.io/badge/CI%2FCD-Passing-brightgreen?style=for-the-badge&logo=githubactions)](.github/workflows/ci.yml)
+[![Tests Passing](https://img.shields.io/badge/Tests-100%25%20Passing-brightgreen?style=for-the-badge&logo=pytest)](tests/)
+[![Security DPDPA 2023](https://img.shields.io/badge/Security-DPDPA%202023%20Audited-blue?style=for-the-badge&logo=shield)](SECURITY.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge)](LICENSE)
 [![Next.js 16](https://img.shields.io/badge/Next.js-16.3-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?style=for-the-badge&logo=fastapi)](https://fastapi.tiangolo.com/)

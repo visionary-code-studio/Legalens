@@ -1,0 +1,13 @@
+{
+  "name": "legalens",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Legalens - AI-Powered Legal Literacy & Document Intelligence Platform",
+  "scripts": {
+    "test": "pytest && cd Frontend && npm run lint",
+    "test:frontend": "cd Frontend && npm run lint && npx tsc --noEmit",
+    "test:backend": "pytest",
+    "lint": "cd Frontend && npm run lint",
+    "build": "cd Frontend && npm run build"
+  }
+}
