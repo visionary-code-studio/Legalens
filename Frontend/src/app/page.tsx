@@ -13,28 +13,39 @@ export default function LandingPage() {
   // Splash screen plays full once on initial website visit, never when returning from other pages
   const [showSplash, setShowSplash] = useState<boolean>(() => {
     if (typeof window !== "undefined") {
-      const completed = sessionStorage.getItem("legalens_splash_completed");
+      const completed =
+        sessionStorage.getItem("legalens_splash_completed") ||
+        localStorage.getItem("legalens_splash_completed");
       return !completed;
     }
     return false;
   });
   const [hasEntered, setHasEntered] = useState<boolean>(() => {
     if (typeof window !== "undefined") {
-      return Boolean(sessionStorage.getItem("legalens_splash_completed"));
+      return Boolean(
+        sessionStorage.getItem("legalens_splash_completed") ||
+        localStorage.getItem("legalens_splash_completed")
+      );
     }
     return false;
   });
 
   useEffect(() => {
-    if (typeof window !== "undefined" && sessionStorage.getItem("legalens_splash_completed")) {
-      setShowSplash(false);
-      setHasEntered(true);
+    if (typeof window !== "undefined") {
+      const completed =
+        sessionStorage.getItem("legalens_splash_completed") ||
+        localStorage.getItem("legalens_splash_completed");
+      if (completed) {
+        setShowSplash(false);
+        setHasEntered(true);
+      }
     }
   }, []);
 
   const handleSplashComplete = () => {
     if (typeof window !== "undefined") {
       sessionStorage.setItem("legalens_splash_completed", "true");
+      localStorage.setItem("legalens_splash_completed", "true");
     }
     setShowSplash(false);
     // Trigger smooth homepage element entrance transition

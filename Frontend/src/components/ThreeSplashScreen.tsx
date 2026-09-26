@@ -2,7 +2,6 @@
 
 import { useRef, useState, useEffect, useCallback } from "react";
 import * as THREE from "three";
-import { Volume2, VolumeX } from "lucide-react";
 
 interface ThreeSplashScreenProps {
   onComplete: () => void;
@@ -13,7 +12,6 @@ export default function ThreeSplashScreen({ onComplete }: ThreeSplashScreenProps
   const canvasContainerRef = useRef<HTMLDivElement>(null);
   const [isFadingOut, setIsFadingOut] = useState<boolean>(false);
   const [storyStep, setStoryStep] = useState<number>(0);
-  const [isAudioActive, setIsAudioActive] = useState<boolean>(true);
 
   const handleFinish = useCallback(() => {
     if (isFadingOut) return;
@@ -138,7 +136,6 @@ export default function ThreeSplashScreen({ onComplete }: ThreeSplashScreenProps
         try {
           videoRef.current.muted = false;
           videoRef.current.volume = 1.0;
-          setIsAudioActive(true);
         } catch {
           // ignore
         }
@@ -154,7 +151,6 @@ export default function ThreeSplashScreen({ onComplete }: ThreeSplashScreenProps
       playPromise
         .then(() => {
           // Playing unmuted successfully from start
-          setIsAudioActive(true);
         })
         .catch(() => {
           // Browser autoplay policy restricted unmuted playback on reload.
@@ -163,7 +159,6 @@ export default function ThreeSplashScreen({ onComplete }: ThreeSplashScreenProps
           video.play().catch(() => {
             // Ignore play abort errors; video will keep buffering/playing
           });
-          setIsAudioActive(false);
 
           const autoUnmuteOnMotion = () => {
             unmuteNow();
@@ -205,15 +200,6 @@ export default function ThreeSplashScreen({ onComplete }: ThreeSplashScreenProps
     };
   }, [handleFinish, onComplete]);
 
-  const toggleSound = () => {
-    if (videoRef.current) {
-      const nextMuted = !videoRef.current.muted;
-      videoRef.current.muted = nextMuted;
-      videoRef.current.volume = 1.0;
-      setIsAudioActive(!nextMuted);
-    }
-  };
-
   return (
     <div
       role="dialog"
@@ -240,37 +226,6 @@ export default function ThreeSplashScreen({ onComplete }: ThreeSplashScreenProps
         }}
         className="w-full h-full object-cover sm:object-contain bg-black relative z-10"
       />
-
-      {/* Top Controls: Sound Toggle & Optional Skip (Top Right) */}
-      <div className="absolute top-6 right-6 z-40 flex items-center gap-3">
-        <button
-          type="button"
-          onClick={toggleSound}
-          className="p-2.5 sm:px-3.5 sm:py-2.5 rounded-full bg-black/50 hover:bg-black/75 text-white/90 hover:text-white backdrop-blur-md border border-white/20 transition-all shadow-xl cursor-pointer flex items-center gap-2 text-xs font-medium"
-          title={isAudioActive ? "Mute audio" : "Unmute audio"}
-        >
-          {isAudioActive ? (
-            <>
-              <Volume2 className="w-4 h-4 text-emerald-400 animate-pulse" />
-              <span className="hidden sm:inline text-white/90 font-medium">Sound Active</span>
-            </>
-          ) : (
-            <>
-              <VolumeX className="w-4 h-4 text-amber-300" />
-              <span className="hidden sm:inline text-amber-200 font-medium">Tap for Sound</span>
-            </>
-          )}
-        </button>
-
-        <button
-          type="button"
-          onClick={handleFinish}
-          className="px-3 py-2 rounded-full bg-black/40 hover:bg-black/65 text-neutral-300 hover:text-white backdrop-blur-md border border-white/15 text-xs font-medium transition-all cursor-pointer shadow-lg"
-          title="Skip intro"
-        >
-          Skip
-        </button>
-      </div>
 
       {/* 2. Whisper-Light Three.js WebGL Dust Layer (Zero CPU overhead) */}
       <div
