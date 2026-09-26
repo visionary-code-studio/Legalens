@@ -58,3 +58,12 @@ desktop.ini
 /legalens video.mp4
 /scratch/
 
+# Local test documents (strictly ignored from git)
+/test_contracts/
+/sample_contracts/
+/*_Old_v1.*
+/*_Updated_v2.*
+/Employment_Agreement_Old.*
+/Employment_Agreement_Updated.*
+
+

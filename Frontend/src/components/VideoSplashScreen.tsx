@@ -9,7 +9,8 @@ interface VideoSplashScreenProps {
 
 export default function VideoSplashScreen({ onComplete }: VideoSplashScreenProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [isMuted, setIsMuted] = useState<boolean>(true);
+  // Default to unmuted so sound starts from initial load
+  const [isMuted, setIsMuted] = useState<boolean>(false);
   const [progress, setProgress] = useState<number>(0);
   const [isFadingOut, setIsFadingOut] = useState<boolean>(false);
 
@@ -30,24 +31,61 @@ export default function VideoSplashScreen({ onComplete }: VideoSplashScreenProps
     }
 
     const video = videoRef.current;
-    if (video) {
-      video.play().catch(() => {
-        // Autoplay policy prevented playback without mute
+    if (!video) return;
+
+    // Ensure audio is unmuted and volume is full from initial load
+    video.muted = false;
+    video.volume = 1.0;
+
+    const attemptUnmutedPlay = async () => {
+      try {
+        await video.play();
+        setIsMuted(false);
+      } catch {
+        // If browser autoplay policy strictly blocks unmuted audio before interaction:
+        // Start muted to ensure video runs without lag, but attach instant global listeners to unmute on first gesture
         video.muted = true;
         setIsMuted(true);
-        video.play().catch(() => {
-          // If still fails, gracefully dismiss
+        try {
+          await video.play();
+        } catch {
           handleFinish();
-        });
-      });
-    }
+          return;
+        }
+
+        const enableSound = () => {
+          if (videoRef.current) {
+            videoRef.current.muted = false;
+            videoRef.current.volume = 1.0;
+            setIsMuted(false);
+          }
+          cleanupListeners();
+        };
+
+        const cleanupListeners = () => {
+          window.removeEventListener("click", enableSound);
+          window.removeEventListener("pointerdown", enableSound);
+          window.removeEventListener("keydown", enableSound);
+          window.removeEventListener("touchstart", enableSound);
+        };
+
+        window.addEventListener("click", enableSound, { once: true, passive: true });
+        window.addEventListener("pointerdown", enableSound, { once: true, passive: true });
+        window.addEventListener("keydown", enableSound, { once: true, passive: true });
+        window.addEventListener("touchstart", enableSound, { once: true, passive: true });
+      }
+    };
+
+    attemptUnmutedPlay();
 
     // Safety fallback timeout (in case video hangs or is longer than 20s)
     const fallbackTimer = setTimeout(() => {
       handleFinish();
     }, 18000);
 
-    return () => clearTimeout(fallbackTimer);
+    return () => {
+      clearTimeout(fallbackTimer);
+    };
   }, [handleFinish, onComplete]);
 
   const handleTimeUpdate = () => {
@@ -60,8 +98,10 @@ export default function VideoSplashScreen({ onComplete }: VideoSplashScreenProps
 
   const toggleSound = () => {
     if (videoRef.current) {
-      videoRef.current.muted = !videoRef.current.muted;
-      setIsMuted(videoRef.current.muted);
+      const newMuted = !videoRef.current.muted;
+      videoRef.current.muted = newMuted;
+      videoRef.current.volume = 1.0;
+      setIsMuted(newMuted);
     }
   };
 
@@ -71,13 +111,13 @@ export default function VideoSplashScreen({ onComplete }: VideoSplashScreenProps
         isFadingOut ? "opacity-0 pointer-events-none" : "opacity-100"
       }`}
     >
-      {/* Video Player */}
+      {/* Video Player - Unmuted by default */}
       <video
         ref={videoRef}
         src="/Splash.mp4"
         playsInline
         autoPlay
-        muted={isMuted}
+        muted={false}
         onTimeUpdate={handleTimeUpdate}
         onEnded={handleFinish}
         onError={handleFinish}
@@ -91,11 +131,11 @@ export default function VideoSplashScreen({ onComplete }: VideoSplashScreenProps
       <div className="absolute top-6 right-6 flex items-center gap-3 z-20">
         <button
           onClick={toggleSound}
-          className="p-2.5 rounded-full bg-white/10 hover:bg-white/20 text-white/80 hover:text-white backdrop-blur-md border border-white/10 transition-colors"
-          title={isMuted ? "Unmute sound" : "Mute sound"}
+          className="p-2.5 rounded-full bg-white/10 hover:bg-white/20 text-white/90 hover:text-white backdrop-blur-md border border-white/20 transition-all cursor-pointer shadow-lg"
+          title={isMuted ? "Unmute audio" : "Mute audio"}
           type="button"
         >
-          {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+          {isMuted ? <VolumeX className="w-4 h-4 text-amber-300" /> : <Volume2 className="w-4 h-4 text-emerald-400" />}
         </button>
       </div>
 
